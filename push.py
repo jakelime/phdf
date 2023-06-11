@@ -8,6 +8,7 @@ from typing import Optional
 import argparse
 import dotenv
 import paramiko
+import socket
 
 APP_NAME = "phdf"
 BASE_DIR = Path(__file__).parent
@@ -67,7 +68,7 @@ class GitManager:
             raise GitNotCleanError("unexpected stdout. please check git status")
         return p0.returncode
 
-    def clone(self, target_dir: Path, branch: str = "") -> Path:
+    def clone(self, target_dir: Path, branch: str = "", blobless_clone=True) -> Path:
         print("cloning git from online repository...")
         print(f" >> {self.repo_url=}:{branch}")
         if target_dir.is_dir():
@@ -84,12 +85,17 @@ class GitManager:
             except OSError as e:
                 print(f"is {self.payload_dir=} in use?")
                 raise e
+
+        git_clone_command = "git clone"
         if branch:
-            command = [
-                f"cd {self.payload_parent_dir} ; git clone -b {branch} {self.repo_url}"
-            ]
-        else:
-            command = [f"cd {self.payload_parent_dir} ; git clone {self.repo_url}"]
+            git_clone_command = f"{git_clone_command} -b {branch}"
+
+        if blobless_clone:
+            git_clone_command = f"{git_clone_command} --filter=blob:none"
+
+        command = [
+            f"cd {self.payload_parent_dir} ; {git_clone_command} {self.repo_url}"
+        ]
         p0 = subprocess.run(command, capture_output=True, shell=True)
 
         if not self.payload_dir.is_dir() or p0.returncode != 0:
@@ -150,6 +156,8 @@ class RemoteManager:
     remote_server: Optional[str]
     user: Optional[str]
     _password: Optional[str]
+    remote_payload_dir: str = ""
+    remote_payload_filename: str = ""
 
     def __init__(self, remote_server: str = ""):
         self.user = os.environ.get("REMOTE_USER")
@@ -175,22 +183,22 @@ class RemoteManager:
             self.ssh_client.connect(
                 hostname=self.remote_server, username=self.user, password=self._password
             )
-        except Exception as e:
-            print(f"{e=}")
-
-
+        except socket.gaierror as e:
+            raise ConnectionError(f"{e}")
 
     def open_sftp(self, target_dirname="Downloads"):
         self.sftp_client = self.ssh_client.open_sftp()
         self.sftp_client.chdir(target_dirname)
         print(f"{self.sftp_client.getcwd()=}")
+        self.remote_payload_dir = target_dirname
 
     def sftp_put(self, local_file: Path):
         print(f"uploading payload //{local_file.parent.name}/{local_file.name} ...")
         remote_f_obj = self.sftp_client.put(str(local_file.absolute()), local_file.name)
         print(f"{remote_f_obj.st_size=}")
+        self.remote_payload_filename = local_file.name
 
-    def ssh_remote_mkdir(self, target_dirname: str = "Downloads"):
+    def mkdir(self, target_dirname: str = "Downloads", overwrite=False):
         """mkdir ``target_dirname`` on the remote server, relative to home (~)
 
         :param target_dirname: _description_, defaults to "Downloads"
@@ -209,6 +217,14 @@ class RemoteManager:
             _ = self.handle_ssh_command(command)
 
     def handle_ssh_command(self, command: str) -> tuple[list[str], list[str]]:
+        """send command to paramiko ssh_client
+        gets stdout and stderr in list[str]
+
+        :param command: a string of bash command, mulitple lines can be separated by ;
+        :type command: str
+        :return: (stdout, stderr)
+        :rtype: tuple[list[str], list[str]]
+        """
         _, stdout, stderr = self.ssh_client.exec_command(command)
         return stdout.readlines(), stderr.readlines()
 
@@ -229,7 +245,8 @@ class RemoteManager:
 
     def run(self, payload_file: Path | str, remote_dirname: str = "Downloads") -> None:
         self.connect()
-        self.ssh_remote_mkdir(remote_dirname)
+        self.mkdir(remote_dirname)
+        self.remote_payload_dir = remote_dirname
         self.open_sftp(remote_dirname)
         match payload_file:
             case Path():
@@ -240,20 +257,72 @@ class RemoteManager:
                 payload = self.get_local_file(payload_file)
             case _:
                 raise NotImplementedError
+        self.remote_payload_filename = payload.name
         self.sftp_put(payload)
+        self.run_remote_install(target_dir="python_repos")
+
+    def check_conda(self):
+        command = "conda --version"
+        stdout, stderr = self.handle_ssh_command(command)
+        if stdout:
+            if "conda" in stdout[0]:
+                print(
+                    f"{stdout[0].strip()} installed on {self.user}@{self.remote_server}"
+                )
+                return True
+        if stderr:
+            if "conda: command not found" in stderr[0]:
+                print(f"conda not found on {self.user}@{self.remote_server}")
+                return False
+        raise Exception(f"unexpected output from check_conda {stdout=}; {stderr=}")
+
+    def run_remote_install(self, target_dir: str = "python_repos"):
+        self.mkdir(target_dir)
+        app_name = self.remote_payload_filename.split("-")[1]
+
+        ## Checks if the app already exists in python_repos
+        command = f"cd {target_dir} ; [ -d '{app_name}' ] && echo 'true'"
+        stdout, stderr = self.handle_ssh_command(command)
+        results = stdout[0].strip().lower() if stdout else ""
+        if results == "true":
+            print(f"remote {target_dir}/{app_name} already exist, removing ...")
+            command = f"cd {target_dir} ; rm -rf {app_name}"
+            _ = self.handle_ssh_command(command)
+        self.mkdir(f"{target_dir}/{app_name}")
+        command = f"cd ~ ; cd {self.remote_payload_dir} ; unzip {self.remote_payload_filename} -d ~/{target_dir}/{app_name}"
+        stdout, stderr = self.handle_ssh_command(command)
+        [print(x.strip()) for x in stdout]
+        [print(x.strip()) for x in stderr]
+
+
+class CliParser(argparse.ArgumentParser):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fn_storage = {}
+
+    def add_argument_and_store_function(self, *args, **kwargs):
+        """adds an argument using the .add_argument() method,
+        and stores the arg mapping to function.
+        """
+        func = kwargs.pop("function")
+        arg_name = args[1].strip("-")
+        if not func:
+            raise Exception("function kwarg must be provided")
+        self.add_argument(*args, **kwargs)
+        self.fn_storage[arg_name] = func
 
 
 def run_push():
-    pm = LocalManager()
+    lom = LocalManager()
     try:
-        pm.run_git()
+        lom.run_git()
     except GitNotCleanError as ge:
         print(repr(ge))
         sys.exit(1)
-    pm.run_zip()
-    pm.cleanup()
-    sf = RemoteManager()
-    sf.run(payload_file=pm.payload_filepath)  # type: ignore
+    lom.run_zip()
+    lom.cleanup()
+    rmg = RemoteManager()
+    rmg.run(payload_file=lom.payload_filepath)  # type: ignore
 
 
 def run_push_simple():
@@ -263,7 +332,10 @@ def run_push_simple():
     pm.run_zip(exclude_git_folder=True)
     pm.cleanup()
     sf = RemoteManager()
-    sf.run(payload_file=pm.payload_filepath)  # type: ignore
+    try:
+        sf.run(payload_file=pm.payload_filepath)  # type: ignore
+    except ConnectionError as e:
+        print(f"ERROR: {e=}")
 
 
 def make_payload():
@@ -282,7 +354,7 @@ def make_payload_simple():
     pm.cleanup()
 
 
-def test_remote_connection():
+def run_test_remote_connx():
     """test ssh connection to the remote"""
     try:
         sf = RemoteManager()
@@ -292,70 +364,74 @@ def test_remote_connection():
         print(f"connx error. {e=}")
 
 
-def test_remote(user_input: str):
-    """test ssh connection to the remote"""
-    sf = RemoteManager()
-    # sf.run(payload_file="~/Downloads/small_payload.zip")
-    sf.run(payload_file=user_input)
+def new_dev_function():
+    rm = RemoteManager()
+    rm.connect()
+    rm.remote_payload_dir = "Downloads"
+    rm.remote_payload_filename = "payload-phdf-20230611_204231.zip"
+    rm.run_remote_install()
 
 
 def cli():
-    parser = argparse.ArgumentParser(
+    parser = CliParser(
         prog="python push.py",
         description=f"Tool to push the {APP_NAME} into remote tester(s)",
         epilog="Usage example: python push.py -p",
     )
-    # parser.add_argument("method")
-    parser.add_argument(
+    parser.add_argument_and_store_function(
         "-p",
         "--push",
         action="store_true",
-        help="Runs the full sequence of push commands",
+        help="Runs the full sequence of push and install commands",
+        function=run_push,
     )
-    parser.add_argument(
+    parser.add_argument_and_store_function(
         "-pt",
         "--push_test",
         action="store_true",
-        help="Runs the mini sequence of push commands (no fetch, small upload file)",
+        help="Runs a partial sequence of push and install (no fetch, exclude .git)",
+        function=run_push_simple,
     )
-    parser.add_argument(
+    parser.add_argument_and_store_function(
         "-mp",
         "--make_payload",
         action="store_true",
         help="Run git pull, then zip to make the payload",
+        function=make_payload,
     )
-    parser.add_argument(
+    parser.add_argument_and_store_function(
         "-tp",
         "--test_payload",
         action="store_true",
         help="Same as prepare_payload, but does not check git status. Used \
             for testing purposes",
+        function=make_payload_simple,
     )
-    parser.add_argument(
+    parser.add_argument_and_store_function(
         "-tc",
         "--test_connection",
         action="store_true",
         help="Test SSH connection to the remote server",
+        function=run_test_remote_connx,
     )
-    parser.add_argument(
-        "-tu",
-        "--test_upload",
-        action="store",
-        help="Test uploading file to remote server",
+    parser.add_argument_and_store_function(
+        "-d",
+        "--dev",
+        action="store_true",
+        help="DEVELOPMENT ONLY. TEST NEW FUNCTIONS",
+        function=new_dev_function,
     )
+
     args = parser.parse_args()
 
-    if args.push:
-        run_push()
-    elif args.push_test:
-        run_push_simple()
-    elif args.test_connection:
-        test_remote_connection()
-    elif args.make_payload:
-        make_payload()
-    elif args.test_payload:
-        make_payload_simple()
-    else:
+    counter = 0
+    for kw, v in args._get_kwargs():
+        if v:
+            parser.fn_storage[kw]()  # executes the function
+            counter += 1
+            break  # only execute 1 function, even if there are multiple flags passed
+
+    if counter == 0:
         parser.error("no args specified. use --help for more information")
 
 
