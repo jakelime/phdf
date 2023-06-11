@@ -293,6 +293,8 @@ class RemoteManager:
         stdout, stderr = self.handle_ssh_command(command)
         [print(x.strip()) for x in stdout]
         [print(x.strip()) for x in stderr]
+        print("cleaning up ...")
+        command = f"rm ~/{self.remote_payload_dir}/{self.remote_payload_filename}"
 
 
 class CliParser(argparse.ArgumentParser):
