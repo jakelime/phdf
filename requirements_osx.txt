@@ -1,0 +1,17 @@
+altgraph==0.17.3
+blosc2==2.0.0
+Cython==0.29.35
+macholib==1.16.2
+msgpack==1.0.5
+numexpr==2.8.4
+numpy==1.24.3
+packaging==23.1
+pandas==2.0.2
+py-cpuinfo==9.0.0
+pyinstaller==5.11.0
+pyinstaller-hooks-contrib==2023.3
+python-dateutil==2.8.2
+pytz==2023.3
+six==1.16.0
+tables==3.8.0
+tzdata==2023.3

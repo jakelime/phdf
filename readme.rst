@@ -1,0 +1,407 @@
+################################################################################################
+PHDF: Python HDF5 solution for interfacing with Smartest8
+################################################################################################
+
+Notice
+------------------------------------------------------------------------------------------------
+v1.0.0+ has major code changes, implemented a solution with well structured
+OOP and also used real examples from the actual test program IO.
+
+TODO:
+------------------------------------------------------------------------------------------------
+
+- Downgrade to python==3.10
+
+  - Due to compatibility issues with Anaconda Linux (python3.10)
+  - from typing import Self is only available on 3.11+
+
+************************************************************************************************
+Usage
+************************************************************************************************
+
+From ``python``
+================================================================================================
+
+.. code-block:: bash
+
+    # Use a JSON string
+    python cli.py '{"partId": {"R00C00": { "site1":{"aTB_0": "0.0"}}}}' '/Users/jli8/Downloads'
+
+    # Use a file.txt, containing a list of the JSON strings separated by commas
+    python cli.py '/Users/jli8/activedir/200-phdf/resources/testfilewriter-2047225563688979.txt' '/Users/jli8/Downloads'
+
+
+The ``cli`` needs 2 arguments
+
+**data_input**
+    accept a filepath, or ``JSON`` string in a specific format.
+
+**output_dir**
+    accept a file directory. Exception will be raised if dir does not exist.
+
+*JSON String format*
+    Must be a string that in this format: ``{"partId": {"R00C00": {"site1":{"aTB_0": "0.0"}}}}``.
+
+
+Do take care of the double quotes ``"`` and single quotes  ``'``.
+
+- ``Java`` specifies that ``String`` must be enclosed with ``"``
+- ``JSON`` specifies that ``key`` and ``values`` must be enclosed with ``"``
+- In ``python``, ``"`` or ``'`` can be interchanged with flexibility
+- In ``bash`` shell (we are using RHEL), ``"`` or ``'`` can be interchanged with flexibility
+
+
+
+Interfacing to Java using subprocess to call python
+================================================================================================
+
+We will use Java's ``ProcessBuilder builder = new ProcessBuilder(command);``,
+
+A simple example of how to implement:
+
+- ``Main.java`` is the entry point to call ``Phdf.java``
+- ``Phdf`` java class is basically a process builder/manager to a call a new process
+- We use the ``Phdf`` class to intiate a subprocess call to ``python cli commands``
+
+A simple execution example:
+
+.. code-block:: java
+
+    public static void main(String[] args) {
+        // Initialize
+        Phdf processor = new Phdf();
+        // Run the CLI tool
+        processor.run("{\"partId1\": {\"R00C00\": { \"site1\":{\"aTB_0\": \"0.0\"}}}}", "/Users/jli8/Downloads");
+    }
+
+Output:
+
+.. code-block:: bash
+
+    (p311) ➜  200-phdf git:(wip) ✗ javac Main.java
+    (p311) ➜  200-phdf git:(wip) ✗ java Main
+    PhdfProcess initialized
+    command iniialized: [/Users/jli8/miniconda3/envs/p311/bin/python, /Users/jli8/activedir/200-phdf/cli.py]
+    >> calling subprocess phdf (data.length=52) /Users/jli8/Downloads
+    INFO    : 0: appended(site1_partId1_aTB_0) to  self.outpath.name='nil-20230607_090809-cp3.h5'
+    >> phdf completed with exitCode=0
+
+
+************************************************************************************************
+Running ``pytest``
+************************************************************************************************
+
+There is a full code testing suite in the ``tests`` dir .Run ``pytest`` from your cli to
+ensure that the code is working properly
+
+.. code-block:: bash
+
+    cd tests
+    pytest # You can run simply without any flag, then you will only see warnings and errors
+    pytest -v # -v is a verbose flag, to show you which are tests running
+
+
+Example results from a full test suite
+
+.. code-block:: bash
+
+    (p311) ➜  tests git:(main) pytest -v
+    ============================================== test session starts ===============================================
+    platform darwin -- Python 3.11.3, pytest-7.2.2, pluggy-1.0.0 -- /Users/jli8/miniconda3/envs/p311/bin/python3.11
+    cachedir: .pytest_cache
+    rootdir: /Users/jli8/activedir/200-phdf/tests
+    plugins: typeguard-2.13.3, cov-4.0.0, anyio-3.6.2, dash-2.9.1
+    collected 4 items
+
+    test_cli.py::test_cli_incomplete_calls[No args] PASSED                                                     [ 25%]
+    test_cli.py::test_cli_incomplete_calls[Missing args] PASSED                                                [ 50%]
+    test_cli.py::test_cli[using JSON string] PASSED                                                            [ 75%]
+    test_cli.py::test_cli[using FileIO] PASSED                                                                 [100%]
+
+    =============================================== 4 passed in 6.30s ================================================
+
+
+You can get pytest using
+``pip install pytest`` on your own environment or on the current ``venv`` created here.
+It is good practice to install pytest on another environment different from the packaging
+environment if you intend to package, but it probably doesn't really matter.
+
+
+
+************************************************************************************************
+Notes
+************************************************************************************************
+
+Unfortunately, we will face problems if we try to pass the entire ``JSON string``
+into the command. The length of the string is too long (``length=1356801``), which
+gives us ``error=7, Argument list too long``.
+
+One alternative is to write the data using ``FileIO``, then pass the filepath to the command.
+
+.. code-block:: java
+    import eviyos2g.lib.shared.common.util.CustomFileWriter;
+
+    public static void main(String[] args) {
+        // Write data to FileIO
+        String jsonFilepath = "/home/j.lim2/tmp/testfilewriter-" + System.nanoTime() + ".txt";
+        String jsonString = "{\"partId1\": {\"R00C00\": { \"site1\":{\"aTB_0\": \"0.0\"}}}}"
+        CustomFileWriter fileWriter = new CustomFileWriter(test_outname);
+        fileWriter.write(jsonString);
+
+        // Run the CLI tool
+        Phdf processor = new Phdf();
+        processor.run(jsonFilepath, "/home/j.lim2/tmp/");
+    }
+
+Output:
+
+.. code-block:: bash
+
+    (p311) ➜  200-phdf git:(wip) ✗ javac Main.java
+    (p311) ➜  200-phdf git:(wip) ✗ java Main
+    intiailised filepath = /Users/jli8/activedir/200-phdf/resources/testfilewriter-2047225563688979.txt
+    jsonString length is 1356801
+    command iniialized: [/Users/jli8/anaconda3/bin/python, /Users/jli8/gitRepos/phdf/cli.py]
+    PhdfProcess initialized
+    command iniialized: [/Users/jli8/miniconda3/envs/p311/bin/python, /Users/jli8/activedir/200-phdf/cli.py]
+    >> calling subprocess phdf (data.length=76) /Users/jli8/Downloads
+    INFO    : 0: appended(site1_partId1_aTB_0) to  self.outpath.name='testfilewriter-2047225563688979-cp3.h5'
+    INFO    : 1: appended(site1_partId1_aTB_1) to  self.outpath.name='testfilewriter-2047225563688979-cp3.h5'
+    ...
+    INFO    : 18: appended(site2_partId1_aTB_8) to  self.outpath.name='testfilewriter-2047225563688979-cp3.h5'
+    INFO    : 19: appended(site2_partId1_aTB_9) to  self.outpath.name='testfilewriter-2047225563688979-cp3.h5'
+    >> phdf completed with exitCode=0
+
+
+************************************************************************************************
+Changelogs
+************************************************************************************************
+
+- v1.0.3
+
+  - added pytest, with a total of 4 critical basic tests
+
+    - 2 tests to CLI for invalid arguments given
+    - test to CLI using JSON string
+    - test to CLI using File as input
+
+
+- v1.0.2
+
+  - updated readme
+  - updated java codes and entry points
+
+
+- v1.0.0 / v1.0.1
+
+  - Properly structured into ``models.py``, ``views.py`` and ``main.py`` (presenter)
+  - Entry point will be ``cli.py`` where it calls "launcher" from ``presenter``
+  - ``cli.py`` reworked with ``argparse`` for fully supported CLI with help and instructions
+  - ``tests.py`` structured to be used for code testing
+  - ``views.py`` primary function is to interact the data, view dataframe and plot pixelMaps
+  - ``models.py`` defines the working model, data structures of our device
+
+- v0.0.2
+
+  - Packaged java class ``Phdf`` into a separate package
+  - ``Main.java`` will be an entry point to instantiate ``process`` object,
+    then call ``process.run()`` method to execute
+
+- v0.0.3
+
+  - Worked out some kinks during debugging when integrating into SMT8
+  - ``Phdf.java``: some hard-coded variables are now changed to match environment
+    of ``rbgv93k0001.int.osram-light.com``
+
+- v0.0.1
+
+  - first draft version released
+
+
+************************************************************************************************
+Environment Setup and Installation
+************************************************************************************************
+
+This section describes how to set up a basic environment to use python.
+
+Note that this part may be already been outdated, we can use automated scripting
+tools to install the entire test program here in
+`smt8-hdf <https://gittf.ams-osram.info/os-opto-dev/smt8-hdf>`_, which is another
+repo with the full test program with the interface already programmed into the
+SMT test program.
+
+
+
+First time installation on bare metal Linux (RHEL)
+================================================================================================
+
+Remote tester: ``rbgv93k0001.int.osram-light.com``
+
+On your local machine with internet access,
+
+#. Download latest Anaconda (python3.10) Linux
+   `distribution <https://www.anaconda.com/download#downloads>`_
+
+#. Donwnload this repo using the ``Download`` button or ``git clone`` (don't forget
+   to zip it for uploading)
+
+#. Transfer the 2 files into the Linux machine
+
+#. ``sftp j.lim2@rbgv93k0001.int.osram-light.com``
+
+#. Check your remote dir using ``sftp> pwd``
+
+   .. code-block:: bash
+
+      Remote working directory: /home/j.lim2/Downloads/
+
+#. Check your local dir ``sftp> lpwd``
+
+   .. code-block:: bash
+
+      Local working directory: /Users/jli8/Downloads/
+
+#. Upload ``Anaconda installer`` using
+   ``sftp> put /Anaconda3-2023.03-1-Linux-x86_64.sh /Anaconda3-2023.03-1-Linux-x86_64.sh``
+
+#. Upload ``phdf.tar`` using
+   ``sftp> put /phdf-main.tar /phdf-main.tar``
+
+
+Now, remote access into the linux machine
+
+#. Open ``konsole``
+
+#. ``cd ~/Downloads/``
+
+First, install ``Anaconda``
+
+#. ``sh Anaconda3-2023.03-1-Linux-x86_64.sh``
+
+#. Follow the on screen instructions to install Anaconda
+
+#. Allow conda to ``conda init``
+
+#. Run ``conda info`` command
+
+   .. code-block:: bash
+
+      active environment : base
+      active env location : /home/j.lim2/Anaconda3
+      conda version : 23.5.0
+      python version : 3.10.9.final.0
+
+
+Then, unpack ``phdf-main`` and start using it
+
+#. Unpack ``phdf-main.tar``
+
+#. ``cd /home/j.lim2/phdf-main``
+
+#. [optional] You can check if python interface is working properly
+
+   .. code-block:: bash
+
+        python cli.py '{"partId": {"R00C00": { "site1":{"aTB_0": "0.0"}}}}' '/Users/jli8/Downloads'
+
+        INFO    : 0: appended(site1_partId_aTB_0) to  self.outpath.name='nil-20230607_093843-cp3.h5'
+
+
+#. Modify the path parameters in ``phdf_j\Phdf.java``
+
+   We need to modify the ``Path`` parameters, depending on your sys environment. In
+   the future, when we figure out packaging and how to distribute, this part will be
+   automated.
+
+   .. code-block:: java
+
+        public Phdf() {
+            ...
+            this.pythonPath = myDocPath + "/anaconda3/bin/python";
+            this.cliPath = myDocPath + "/gitRepos/phdf/cli.py";
+            ...
+        }
+
+#. Modify the entry point ``Main.java``
+
+   This is just an example. This part code should be living in your actual test program.
+
+   .. code-block:: java
+
+        import phdf_j.Phdf;
+
+        public class Main {
+
+            public static void main(String[] args) {
+
+                // Initialize the CLI tool
+                Phdf processor = new Phdf();
+
+                // Run the CLI tool (Option#1.1)
+                processor.run(jsonString, "/Users/jli8/Downloads"); // Unfortunately, we get error=7, Argument list too long
+
+                // Run the CLI tool (Option#1.2)
+                processor.run("{\"partId1\": {\"R00C00\": { \"site1\":{\"aTB_0\": \"0.0\"}}}}", "/Users/jli8/Downloads");
+
+                // Run the CLI tool (Option#2)
+                processor.run("/Users/jli8/activedir/200-phdf/resources/testfilewriter-2047225563688979.txt", "/Users/jli8/Downloads");
+            }
+
+        }
+
+
+#. Test out the ``java`` entry point
+
+    .. code-block:: bash
+
+        (p311) ➜  200-phdf git:(wip) ✗ javac Main.java
+        (p311) ➜  200-phdf git:(wip) ✗ java Main
+
+        command iniialized: [/Users/jli8/anaconda3/bin/python, /Users/jli8/gitRepos/phdf/cli.py]
+        PhdfProcess initialized
+        >> calling subprocess phdf (data.length=52) /Users/jli8/Downloads
+        INFO    : 0: appended(site1_partId1_aTB_0) to  self.outpath.name='nil-20230607_090809-cp3.h5'
+        >> phdf completed with exitCode=0
+
+
+
+Setup Python environment
+===============================================================================================
+
+Nothing too special here, these are standard python packaging.
+
+Assuming we start from fresh python, you can run these commands to start ``venv``
+
+.. code-block:: bash
+
+    python3 -m venv venv
+    source ./venv/bin/activate
+    which python
+    pip install tables
+    pip install pandas
+    pip install pyinstaller
+
+
+.. code-block:: bash
+
+    pip freeze > requirements_osx.txt
+    pip install -r requirements_osx.txt
+    # you can simply run pip install from my requirements.txt file
+
+
+
+Using ``Pyinstaller``
+================================================================================================
+
+Always use ``pyinstaller`` on a dedicated virtual environment!
+This will ensure that app will package the dependencies properly and minimise debugging issues
+related to dependencies.
+
+
+.. code-block:: bash
+
+    # Using OSX
+    pyinstaller cli.py --name phdf --onefile --collect-all tables
+
+
+
