@@ -298,6 +298,8 @@ class RemoteManager:
         stdout, stderr = self.handle_ssh_command(command)
         [print(x.strip()) for x in stdout]
         [print(x.strip()) for x in stderr]
+        if not self.check_conda():
+            print(f"WANRING: Anaconda (python3.10) is required to run {app_name}")
         print("install script end")
 
 
