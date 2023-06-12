@@ -47,16 +47,19 @@ class GitManager:
 
             case "Windows":
                 ## Commands are expected to be sent to cmd.exe shell for Windows case
-                command = [
-                    "cd",
-                    f"{str(self.git_base_dir.resolve())}",
-                    "&&",
-                    "git",
-                    "fetch",
-                    "&&",
-                    "git",
-                    "status",
-                ]
+                if isinstance(self.git_base_dir, Path):
+                    command = [
+                        "cd",
+                        f"{str(self.git_base_dir.resolve())}",
+                        "&&",
+                        "git",
+                        "fetch",
+                        "&&",
+                        "git",
+                        "status",
+                    ]
+                else:
+                    raise RuntimeError(f"unxpected {self.git_base_dir=}")
 
             case _:
                 raise NotImplementedError(f"not yet available for {operating_system=}")
