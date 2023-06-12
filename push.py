@@ -9,6 +9,7 @@ import argparse
 import dotenv
 import paramiko
 import socket
+import platform
 import enum
 
 APP_NAME = "phdf"
@@ -54,26 +55,59 @@ class GitManager:
 
     def fetch_status(self) -> int:
         print("getting git current status...")
-        command = [f"cd {self.git_dir} ; git fetch ; git status"]
-        p0 = subprocess.run(command, capture_output=True, shell=True)
-        stdout = p0.stdout.decode("utf-8")
-        if ("Your branch is ahead" in stdout) and (
-            '(use "git push" to publish your local commits)' in stdout
-        ):
-            raise GitRepositoryNotUpdatedError("please push your local commits")
+        fnReturnCode = -1
 
-        elif "Changes not staged for commit" in stdout:
-            raise GitNotCleanError("please check and commit changes first")
+        match (operating_system := platform.system()):
+            case "Darwin" | "Linux":
+                command = [f"cd {self.git_dir} ; git fetch ; git status"]
+                stdout, _, fnReturnCode = self.handle_shell_command()
+                p0 = subprocess.run(command, capture_output=True, shell=True)
+                if ("Your branch is ahead" in stdout) and (
+                    '(use "git push" to publish your local commits)' in stdout
+                ):
+                    raise GitRepositoryNotUpdatedError("please push your local commits")
 
-        elif ("Your branch is up to date" in stdout) and (
-            "nothing to commit, working tree clean" in stdout
-        ):
-            print("git is clean.")
+                elif "Changes not staged for commit" in stdout:
+                    raise GitNotCleanError("please check and commit changes first")
 
-        else:
-            print(f"{p0=}")
-            raise GitNotCleanError("unexpected stdout. please check git status")
-        return p0.returncode
+                elif ("Your branch is up to date" in stdout) and (
+                    "nothing to commit, working tree clean" in stdout
+                ):
+                    print("git is clean.")
+                else:
+                    print(f"{p0=}")
+                    raise GitNotCleanError("unexpected stdout. please check git status")
+
+            case "Windows":
+                command = [
+                    "cd",
+                    f"{str(self.git_dir.resolve())}",
+                    "&&",
+                    "git",
+                    "fetch",
+                    "&&",
+                    "git",
+                    "status",
+                ]
+                stdout, stderr, fnReturnCode = self.handle_shell_command(command)
+                print(f"{stdout=}")
+                print(f"{stderr=}")
+
+                if "Changes not staged for commit" in stdout:
+                    raise GitNotCleanError("please check and commit changes first")
+
+                elif ("Your branch is up to date" in stdout) and (
+                    "nothing to commit, working tree clean" in stdout
+                ):
+                    print("git is clean.")
+                else:
+                    print(f"{p0=}")
+                    raise GitNotCleanError("unexpected stdout. please check git status")
+
+            case _:
+                raise NotImplementedError(f"not yet available for {operating_system=}")
+
+        return fnReturnCode
 
     def clone(self, target_dir: Path, branch: str = "", blobless_clone=True) -> Path:
         print("cloning git from online repository...")
@@ -109,6 +143,15 @@ class GitManager:
             raise RuntimeError("failed to create payload dir")
 
         return self.payload_dir
+
+    def handle_shell_command(self, command: list[str]) -> tuple[str, str, int]:
+        """ handles commands to the shell. returns a tuple of
+        (stdout, stderr, returncode)
+        """
+        p0 = subprocess.run(command, capture_output=True, shell=True)
+        stdout = p0.stdout.decode("utf-8")
+        stderr = p0.stderr.decode("utf-8")
+        return stdout, stderr, p0.returncode
 
 
 class LocalManager:
@@ -354,6 +397,7 @@ def run_push():
     rmg = RemoteManager()
     rmg.run(payload_file=lom.payload_filepath)  # type: ignore
 
+
 def run_push_specify_server(user_input: str):
     lom = LocalManager()
     try:
@@ -489,6 +533,13 @@ def cli():
         parser.error("no args specified. use --help for more information")
 
 
+def test_git_manager():
+    gm = GitManager("git@gittf.ams-osram.info:os-opto-dev/phdf.git")
+    print(f"{gm.git_dir=}")
+    gm.fetch_status()
+
+
 if __name__ == "__main__":
     dotenv.load_dotenv()
-    cli()
+    # cli()
+    test_git_manager()
