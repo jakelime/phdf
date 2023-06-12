@@ -9,9 +9,16 @@ import argparse
 import dotenv
 import paramiko
 import socket
+import enum
 
 APP_NAME = "phdf"
 BASE_DIR = Path(__file__).parent
+
+
+class EnvVars(enum.Enum):
+    REMOTE_SERVER = "REMOTE_SERVER"
+    REMOTE_USER = "REMOTE_USER"
+    REMOTE_PASSWORD = "REMOTE_PASSWORD"
 
 
 class EnvironmentVarError(RuntimeError):
@@ -159,15 +166,30 @@ class RemoteManager:
     remote_payload_dir: str = ""
     remote_payload_filename: str = ""
 
-    def __init__(self, remote_server: str = ""):
-        self.user = os.environ.get("REMOTE_USER")
-        self._password = os.environ.get("REMOTE_PASSWORD")
+    def __init__(self, remote_user: str = "", remote_server: str = ""):
+        self.user = (
+            os.environ.get(EnvVars.REMOTE_USER.value)
+            if not remote_user
+            else remote_user
+        )
+        if not self.user:
+            raise EnvironmentVarError(
+                f"{EnvVars.REMOTE_USER.value} not specified and not found in env vars"
+            )
+
+        self._password = os.environ.get(EnvVars.REMOTE_PASSWORD.value)
+        if not self._password:
+            raise EnvironmentVarError(
+                f"{EnvVars.REMOTE_PASSWORD} not found in env vars"
+            )
+
         self.remote_server = (
             os.environ.get("REMOTE_SERVER") if not remote_server else remote_server
         )
-
-        if (not self.user) and (not self._password):
-            raise EnvironmentVarError("user/password not found in env vars")
+        if not self.remote_server:
+            raise EnvironmentVarError(
+                f"{EnvVars.REMOTE_SERVER} not specified not found in env vars"
+            )
 
         self.ssh_client = paramiko.SSHClient()
         self.ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -332,6 +354,22 @@ def run_push():
     rmg = RemoteManager()
     rmg.run(payload_file=lom.payload_filepath)  # type: ignore
 
+def run_push_specify_server(user_input: str):
+    lom = LocalManager()
+    try:
+        lom.run_git()
+    except GitNotCleanError as ge:
+        print(repr(ge))
+        sys.exit(1)
+    lom.run_zip()
+    lom.cleanup()
+    if "@" in user_input:
+        input_user, input_server = user_input.split("@")
+        rmg = RemoteManager(remote_user=input_user, remote_server=input_server)
+    else:
+        rmg = RemoteManager(remote_server=user_input)
+    rmg.run(payload_file=lom.payload_filepath)  # type: ignore
+
 
 def run_push_simple():
     # exclude_git_folder
@@ -369,6 +407,7 @@ def run_test_remote_connx():
         sf.connect()
         print(f"ssh connection passed: {sf.remote_server}")
     except Exception as e:
+        # raise e
         print(f"connx error. {e=}")
 
 
@@ -391,6 +430,13 @@ def cli():
         "--push",
         action="store_true",
         help="Runs the full sequence of push and install commands",
+        function=run_push,
+    )
+    parser.add_argument_and_store_function(
+        "-ps",
+        "--push_specify_server",
+        action="store",
+        help="Runs the full sequence of push, manually specify server URL",
         function=run_push,
     )
     parser.add_argument_and_store_function(
