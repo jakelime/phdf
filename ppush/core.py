@@ -11,7 +11,7 @@ from typing import Any
 from ppush import api
 
 APP_NAME = "phdf"
-
+EXPECTED_PYTHON_VERSION = "3.10"
 
 class EnvVars(enum.Enum):
     REMOTE_SERVER = "REMOTE_SERVER"

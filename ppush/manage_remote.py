@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Optional
 
 from ppush.core import EnvVars, EnvironmentVarError
-
+from ppush.core import EXPECTED_PYTHON_VERSION
 
 class RemoteManager:
     remote_server: Optional[str]
@@ -172,7 +172,7 @@ class RemoteManager:
         [print(x.strip()) for x in stdout]
         [print(x.strip()) for x in stderr]
         if not self.check_conda():
-            print(f"WANRING: Anaconda (python3.10) is required to run {app_name}")
+            print(f"WANRING: Anaconda (python{EXPECTED_PYTHON_VERSION}) is required to run {app_name}")
         print("install script end")
         print(
             "Usage: \n  conda activate\n  python {phdf-path/cli.py} {jsonString} {outpath.h5}\n  python {phdf-path/cli.py} {jsonFile.txt} {outpath.h5}"
