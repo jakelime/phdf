@@ -8,10 +8,6 @@ IO.
 
 ## TODO:
 
--   Downgrade to python==3.10
-    -   Due to compatibility issues with Anaconda Linux (python3.10)
-    -   from typing import Self is only available on 3.11+
-
 ### Usage
 
 #### From `python`
@@ -21,7 +17,8 @@ IO.
 python cli.py '{"partId": {"R00C00": { "site1":{"aTB_0": "0.0"}}}}' '/Users/jli8/Downloads'
 
 # Use a file.txt, containing a list of the JSON strings separated by commas
-python cli.py '/Users/jli8/activedir/200-phdf/resources/testfilewriter-2047225563688979.txt' '/Users/jli8/Downloads'
+python cli.py /Users/jli8/activedir/200-phdf/resources/testfilewriter-2047225563688979.txt /Users/jli8/Downloads
+python python cli.py ~/python_repos/phdf/resources/testfilewriter-2047225563688979.txt ~/Documents
 ```
 
 The `cli` needs 2 arguments
@@ -45,8 +42,8 @@ Do take care of the double quotes `"` and single quotes `'`.
 -   `Java` specifies that `String` must be enclosed with `"`
 -   `JSON` specifies that `key` and `values` must be enclosed with `"`
 -   In `python`, `"` or `'` can be interchanged with flexibility
--   In `bash` shell (we are using RHEL), `"` or `'` can be interchanged
-    with flexibility
+-   In `bash`, `'` means literal strings, we can use it to encase like
+    this `'{"a": "1"}'`
 
 #### Interfacing to Java using subprocess to call python
 
@@ -84,6 +81,91 @@ INFO    : 0: appended(site1_partId1_aTB_0) to  self.outpath.name='nil-20230607_0
 >> phdf completed with exitCode=0
 ```
 
+### Installation
+
+Some of the DevOps features are available in this repo.
+
+#### To distribute to remote testers
+
+**Requirements:**
+
+-   Local machine (`OSX` / `Win`) with connection to both
+    `Remote Tester` and `gittf`
+-   Remote tester: `rbgv93k0001.int.osram-light.com`
+
+**On your the local machine**
+
+1.  Set up your SSH connection to the `gitf repo` if you haven\'t
+    already done so. SSH setup guide is available in Github/Gitlab docs
+    and also some of my other project\'s readme.
+
+2.  Test your connection to `remote tester` and `gittf` using
+    `python push.py -tc`
+
+    ``` bash
+    (p311) ➜  200-phdf git:(debugPs) ✗ python push.py -tc
+    testing connection to remote server...
+    >> ssh connection passed: rbgv93k0001.int.osram-light.com
+    testing SSH connection to gittf...
+    Welcome to GitLab, @jake.lim!
+    ```
+
+3.  Run the push command: `python push.py --push`
+
+    > ``` bash
+    > (p311) ➜  200-phdf git:(debugPs) python push.py -p
+    > cloning git from online repository...
+    > >> self.repo_url='git@gittf.ams-osram.info:os-opto-dev/phdf.git':
+    > zipping...
+    > cleaning up...
+    > self.sftp_client.getcwd()='/home/j.lim2/Downloads'
+    > uploading payload //Downloads/payload-phdf-20230612_145919.zip ...
+    > making dir(python_repos/phdf) on remote server...
+    > Archive:  payload-phdf-20230612_145919.zip
+    > ...
+    > cleaning up ...
+    > conda 23.3.1 installed on j.lim2@rbgv93k0001.int.osram-light.com
+    > install script end
+    > Usage:
+    > conda activate
+    >     python {phdf-path/cli.py} {jsonString} {outpath.h5}
+    >     python {phdf-path/cli.py} {jsonFile.txt} {outpath.h5}
+    > ```
+
+**On the remote tester**
+
+1.  If Anaconda has not been installed, please download and install
+    latest Anaconda for Linux
+    [distribution](https://www.anaconda.com/download#downloads)
+
+2.  Either connect by using `SSH` into the remote tester, or `VNC` to
+    use the terminal `shell` .
+
+3.  The `phdf` application is installed in `~/python_repos/phdf`
+
+    The `python` path for Anaconda (default) is installed in
+    `~/anaconda3/bin/python`
+
+    Test the app by running the command in your shell:
+
+    `python cli.py {jsonString} {outputPath}`
+
+    ``` bash
+    [j.lim2@rbgv93k0001 ~]$ ~/anaconda3/bin/python ~/python_repos/phdf/cli.py '{"partId": {"R00C00": { "site1":{"aTB_0": "0.0"}}}}' ~/Documents
+    INFO    : 0: appended(site1_partId_aTB_0) to  self.outpath.name='nil-20230612_151141-cp3.h5'
+    ```
+
+4.  Or, if you are familiar with using `conda`, do it the proper way
+
+    ``` bash
+    [j.lim2@rbgv93k0001 phdf]$ conda activate
+    (base) [j.lim2@rbgv93k0001 phdf]$ python cli.py ~/python_repos/phdf/resources/testfilewriter-2047225563688979.txt ~/Documents
+    INFO    : 0: appended(site1_partId1_aTB_0) to  self.outpath.name='testfilewriter-2047225563688979-cp3.h5'
+    ...
+    INFO    : 18: appended(site2_partId1_aTB_8) to  self.outpath.name='testfilewriter-2047225563688979-cp3.h5'
+    INFO    : 19: appended(site2_partId1_aTB_9) to  self.outpath.name='testfilewriter-2047225563688979-cp3.h5'
+    ```
+
 ### Running `pytest`
 
 There is a full code testing suite in the `tests` dir .Run `pytest` from
@@ -115,9 +197,8 @@ test_cli.py::test_cli[using FileIO] PASSED                                      
 ```
 
 You can get pytest using `pip install pytest` on your own environment or
-on the current `venv` created here. It is good practice to install
-pytest on another environment different from the packaging environment
-if you intend to package, but it probably doesn\'t really matter.
+simply use the DevOps installation script to install the full
+environment (bare minimum + push + test).
 
 ### Notes
 
@@ -164,6 +245,8 @@ INFO    : 19: appended(site2_partId1_aTB_9) to  self.outpath.name='testfilewrite
 
 ### Changelogs
 
+-   v1.0.5
+    -   added push.py for DevOps
 -   v1.0.3
     -   added pytest, with a total of 4 critical basic tests
         -   2 tests to CLI for invalid arguments given
@@ -206,7 +289,80 @@ scripting tools to install the entire test program here in
 another repo with the full test program with the interface already
 programmed into the SMT test program.
 
-#### First time installation on bare metal Linux (RHEL)
+#### Setting up Python environment
+
+1.  We use standard python packaging techniques here. A simple example
+    for bare minimal install manually:
+
+    ``` bash
+    ## Using python==3.10
+    python3 -m venv venv
+    source ./venv/bin/activate
+    which python
+    pip install tables
+    pip install pandas
+    pip install pyinstaller
+    ```
+
+2.  Another one of the standard methods to install from pip
+    requirements.txt:
+
+    ``` bash
+    ## Full libraries consist of packages for
+    # - Bare minimum depedencies
+    # - DevOps (PUSH TO SERVER)
+    # - PyTest for code testing
+    pip install -r requirements-osx-full.txt
+
+    ## Bare minimum dependencies to execute in production
+    pip install -r requirements-osx-minimum.txt
+
+    ## How to make req.txt from your current env
+    pip freeze > requirements.txt
+    ```
+
+3.  Use `Bash` script for automated `venv` execution. This method will
+    pull the latest versions of depedencies from PyPI. It should work
+    most of the time, but not guaranteed.
+
+    ``` bash
+    ## To install bare minimum dependencies for production
+    bash make_venv.sh
+
+    ## To install full suite, including PyTest and DevOps (SSH integration)
+    base make_venv.sh full
+    ```
+
+4.  To view the dependencies, read the function
+    `install_python_libraries_full` from `make_venv.sh`.
+
+    This codebase employs the use of new python syntax such walrus
+    operator and type hinting.
+
+    Recommended `python>=3.10` because of the `match statements` and
+    `type hinting` used.
+
+    Recommended test environment `python3.10` because Anaconda\'s latest
+    Linux distribution as of today is still `python3.10`. Using
+    `python3.11` will work most of the time, but there are notable new
+    in type hintings not compatible to `python3.10`.
+
+    Refactoring for compatibility with `python3.8` for compatibility to
+    `win7` is possible. Remove the type hints and replace `match`
+    statements with `if else` statements.
+
+#### Using `Pyinstaller`
+
+Always use `pyinstaller` on a dedicated virtual environment! This will
+ensure that app will package the dependencies properly and minimise
+debugging issues related to dependencies.
+
+``` bash
+# Using OSX
+pyinstaller cli.py --name phdf --onefile --collect-all tables
+```
+
+#### Outdated instructions
 
 Remote tester: `rbgv93k0001.int.osram-light.com`
 
@@ -331,35 +487,30 @@ Then, unpack `phdf-main` and start using it
     > >> phdf completed with exitCode=0
     > ```
 
-#### Setup Python environment
+7.  `sftp j.lim2@rbgv93k0001.int.osram-light.com`
 
-Nothing too special here, these are standard python packaging.
+8.  Check your remote dir using `sftp> pwd`
 
-Assuming we start from fresh python, you can run these commands to start
-`venv`
+    ``` bash
+    Remote working directory: /home/j.lim2/Downloads/
+    ```
 
-``` bash
-python3 -m venv venv
-source ./venv/bin/activate
-which python
-pip install tables
-pip install pandas
-pip install pyinstaller
-```
+9.  Check your local dir `sftp> lpwd`
 
-``` bash
-pip freeze > requirements_osx.txt
-pip install -r requirements_osx.txt
-# you can simply run pip install from my requirements.txt file
-```
+    ``` bash
+    Local working directory: /Users/jli8/Downloads/
+    ```
 
-#### Using `Pyinstaller`
+10. Upload `Anaconda installer` using
+    `sftp> put /Anaconda3-2023.03-1-Linux-x86_64.sh /Anaconda3-2023.03-1-Linux-x86_64.sh`
 
-Always use `pyinstaller` on a dedicated virtual environment! This will
-ensure that app will package the dependencies properly and minimise
-debugging issues related to dependencies.
+11. Upload `phdf.tar` using `sftp> put /phdf-main.tar /phdf-main.tar`
 
-``` bash
-# Using OSX
-pyinstaller cli.py --name phdf --onefile --collect-all tables
-```
+Now, remote access into the linux machine
+
+1.  Open `konsole`
+2.  `cd ~/Downloads/`
+
+First, install `Anaconda`
+
+1.  `sh Anaconda3-2023.03-1-Linux-x86_64.sh`

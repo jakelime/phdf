@@ -193,6 +193,28 @@ class GitManager:
             print(f"{stderr=}")
             raise GitNotCleanError("unexpected stdout. please check git status")
 
+    @staticmethod
+    def run_ssh_test_command():
+        print("testing SSH connection to gittf...")
+        match (operating_system := platform.system()):
+            case "Darwin" | "Linux":
+                ## Commands are expected to be sent to bash
+                command = ["ssh -T git@gittf.ams-osram.info"]
+
+            case "Windows":
+                ## Commands are expected to be sent to cmd.exe shell for Windows case
+                command = [
+                    "ssh",
+                    "-T",
+                    "git@gittf.ams-osram.info",
+                ]
+
+            case _:
+                raise NotImplementedError(f"not yet available for {operating_system=}")
+        stdout, stderr, _ = handle_shell_command(command)
+        [print(line) for line in stdout.splitlines()]
+        [print(line) for line in stderr.splitlines()]
+
 
 class LocalManager:
     base_dir: Optional[Path] = None
@@ -439,7 +461,9 @@ class RemoteManager:
         if not self.check_conda():
             print(f"WANRING: Anaconda (python3.10) is required to run {app_name}")
         print("install script end")
-        print("Usage: \n  conda activate\n  python {phdf-path/cli.py} {jsonString} {outpath.h5}\n  python {phdf-path/cli.py} {jsonFile.txt} {outpath.h5}")
+        print(
+            "Usage: \n  conda activate\n  python {phdf-path/cli.py} {jsonString} {outpath.h5}\n  python {phdf-path/cli.py} {jsonFile.txt} {outpath.h5}"
+        )
 
 
 class CliParser(argparse.ArgumentParser):
@@ -521,20 +545,24 @@ def make_payload_simple():
 def run_test_remote_connx():
     """test ssh connection to the remote"""
     try:
+        print("testing connection to remote server...")
         sf = RemoteManager()
         sf.connect()
-        print(f"ssh connection passed: {sf.remote_server}")
+        print(f" >> ssh connection passed: {sf.remote_server}")
     except Exception as e:
-        # raise e
         print(f"connx error. {e=}")
+
+    gm = GitManager("")
+    gm.run_ssh_test_command()
 
 
 def new_dev_function():
-    rm = RemoteManager()
-    rm.connect()
-    rm.remote_payload_dir = "Downloads"
-    rm.remote_payload_filename = "payload-phdf-20230611_204231.zip"
-    rm.run_remote_install()
+    # rm = RemoteManager()
+    # rm.connect()
+    # rm.remote_payload_dir = "Downloads"
+    # rm.remote_payload_filename = "payload-phdf-20230611_204231.zip"
+    # rm.run_remote_install()
+    print("Nothing to do")
 
 
 def cli():
@@ -555,7 +583,7 @@ def cli():
         "--push_specify_server",
         action="store",
         help="Runs the full sequence of push, manually specify server URL",
-        function=run_push,
+        function=run_push_specify_server,
     )
     parser.add_argument_and_store_function(
         "-pt",
@@ -583,7 +611,7 @@ def cli():
         "-tc",
         "--test_connection",
         action="store_true",
-        help="Test SSH connection to the remote server",
+        help="Test SSH connection to the remote server, and gittf",
         function=run_test_remote_connx,
     )
     parser.add_argument_and_store_function(
@@ -599,8 +627,12 @@ def cli():
     counter = 0
     for kw, v in args._get_kwargs():
         if v:
-            parser.fn_storage[kw]()  # executes the function
-            counter += 1
+            if isinstance(v, bool):
+                parser.fn_storage[kw]()  # executes the function
+                counter += 1
+            elif isinstance(v, str):
+                parser.fn_storage[kw](v)  # executes the function with arg
+                counter += 1
             break  # only execute 1 function, even if there are multiple flags passed
 
     if counter == 0:
