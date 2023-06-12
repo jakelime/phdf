@@ -56,29 +56,13 @@ class GitManager:
     def fetch_status(self) -> int:
         print("getting git current status...")
         fnReturnCode = -1
-
         match (operating_system := platform.system()):
             case "Darwin" | "Linux":
+                ## Commands are expected to be sent to bash
                 command = [f"cd {self.git_dir} ; git fetch ; git status"]
-                stdout, _, fnReturnCode = self.handle_shell_command()
-                p0 = subprocess.run(command, capture_output=True, shell=True)
-                if ("Your branch is ahead" in stdout) and (
-                    '(use "git push" to publish your local commits)' in stdout
-                ):
-                    raise GitRepositoryNotUpdatedError("please push your local commits")
-
-                elif "Changes not staged for commit" in stdout:
-                    raise GitNotCleanError("please check and commit changes first")
-
-                elif ("Your branch is up to date" in stdout) and (
-                    "nothing to commit, working tree clean" in stdout
-                ):
-                    print("git is clean.")
-                else:
-                    print(f"{p0=}")
-                    raise GitNotCleanError("unexpected stdout. please check git status")
 
             case "Windows":
+                ## Commands are expected to be sent to cmd.exe shell for Windows case
                 command = [
                     "cd",
                     f"{str(self.git_dir.resolve())}",
@@ -89,29 +73,12 @@ class GitManager:
                     "git",
                     "status",
                 ]
-                stdout, stderr, fnReturnCode = self.handle_shell_command(command)
-                print(f"{stdout=}")
-                print(f"{stderr=}")
-
-                if "Changes not staged for commit" in stdout:
-                    raise GitNotCleanError("please check and commit changes first")
-
-                elif ("Your branch is ahead" in stdout) and (
-                    'to publish your local commits' in stdout
-                ):
-                    raise GitRepositoryNotUpdatedError("please push your local commits")
-
-                elif ("Your branch is up to date" in stdout) and (
-                    "nothing to commit, working tree clean" in stdout
-                ):
-                    print("git is clean.")
-                else:
-                    print(f"{p0=}")
-                    raise GitNotCleanError("unexpected stdout. please check git status")
 
             case _:
                 raise NotImplementedError(f"not yet available for {operating_system=}")
 
+        stdout, stderr, fnReturnCode = self.handle_shell_command(command)
+        self.check_git_output(stdout, stderr)
         return fnReturnCode
 
     def clone(self, target_dir: Path, branch: str = "", blobless_clone=True) -> Path:
@@ -150,7 +117,7 @@ class GitManager:
         return self.payload_dir
 
     def handle_shell_command(self, command: list[str]) -> tuple[str, str, int]:
-        """ handles commands to the shell. returns a tuple of
+        """handles commands to the shell. returns a tuple of
         (stdout, stderr, returncode)
         """
         p0 = subprocess.run(command, capture_output=True, shell=True)
@@ -158,6 +125,23 @@ class GitManager:
         stderr = p0.stderr.decode("utf-8")
         return stdout, stderr, p0.returncode
 
+    def check_git_output(self, stdout: str, stderr: str):
+        if "Changes not staged for commit" in stdout:
+            raise GitNotCleanError("please check and commit changes first")
+
+        elif ("Your branch is ahead" in stdout) and (
+            "to publish your local commits" in stdout
+        ):
+            raise GitRepositoryNotUpdatedError("please push your local commits")
+
+        elif ("Your branch is up to date" in stdout) and (
+            "nothing to commit, working tree clean" in stdout
+        ):
+            print("git is clean.")
+        else:
+            print(f"{stdout=}")
+            print(f"{stderr=}")
+            raise GitNotCleanError("unexpected stdout. please check git status")
 
 class LocalManager:
     base_dir: Optional[Path] = None
