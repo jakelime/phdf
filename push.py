@@ -96,6 +96,11 @@ class GitManager:
                 if "Changes not staged for commit" in stdout:
                     raise GitNotCleanError("please check and commit changes first")
 
+                elif ("Your branch is ahead" in stdout) and (
+                    'to publish your local commits' in stdout
+                ):
+                    raise GitRepositoryNotUpdatedError("please push your local commits")
+
                 elif ("Your branch is up to date" in stdout) and (
                     "nothing to commit, working tree clean" in stdout
                 ):
