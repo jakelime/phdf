@@ -3,6 +3,7 @@ from pathlib import Path
 from phdf import utils
 import shutil
 import os
+import stat
 import sys
 from typing import Optional
 import argparse
@@ -14,6 +15,26 @@ import enum
 
 APP_NAME = "phdf"
 BASE_DIR = Path(__file__).parent
+
+
+def handle_readonly_error(func, path, exc_info):
+    """
+    Error handler for ``shutil.rmtree``.
+
+    If the error is due to an access error (read only file)
+    it attempts to add write permission and then retries.
+
+    If the error is for another reason it re-raises the error.
+
+    Usage : ``shutil.rmtree(path, onerror=onerror)``
+    """
+    ## Required for win in shutil.rmtree use cases
+    # Is the error an access error?
+    if not os.access(path, os.W_OK):
+        os.chmod(path, stat.S_IWUSR)
+        func(path)
+    else:
+        raise
 
 
 class EnvVars(enum.Enum):
@@ -32,6 +53,16 @@ class GitRepositoryNotUpdatedError(Exception):
 
 class GitNotCleanError(Exception):
     """raised when there are changes not staged for commit"""
+
+
+def handle_shell_command(command: list[str]) -> tuple[str, str, int]:
+    """handles commands to the shell. returns a tuple of
+    (stdout, stderr, returncode)
+    """
+    p0 = subprocess.run(command, capture_output=True, shell=True)
+    stdout = p0.stdout.decode("utf-8")
+    stderr = p0.stderr.decode("utf-8")
+    return stdout, stderr, p0.returncode
 
 
 class GitManager:
@@ -77,7 +108,7 @@ class GitManager:
             case _:
                 raise NotImplementedError(f"not yet available for {operating_system=}")
 
-        stdout, stderr, fnReturnCode = self.handle_shell_command(command)
+        stdout, stderr, fnReturnCode = handle_shell_command(command)
         self.check_git_output(stdout, stderr)
         return fnReturnCode
 
@@ -99,31 +130,50 @@ class GitManager:
                 print(f"is {self.payload_dir=} in use?")
                 raise e
 
-        git_clone_command = "git clone"
-        if branch:
-            git_clone_command = f"{git_clone_command} -b {branch}"
+        match (operating_system := platform.system()):
+            case "Darwin" | "Linux":
+                ## Commands are expected to be sent to bash
+                git_clone_command = "git clone"
+                if branch:
+                    git_clone_command = f"{git_clone_command} -b {branch}"
 
-        if blobless_clone:
-            git_clone_command = f"{git_clone_command} --filter=blob:none"
+                if blobless_clone:
+                    git_clone_command = f"{git_clone_command} --filter=blob:none"
 
-        command = [
-            f"cd {self.payload_parent_dir} ; {git_clone_command} {self.repo_url}"
-        ]
-        p0 = subprocess.run(command, capture_output=True, shell=True)
+                command = [
+                    f"cd {self.payload_parent_dir} ; {git_clone_command} {self.repo_url}"
+                ]
 
-        if not self.payload_dir.is_dir() or p0.returncode != 0:
+            case "Windows":
+                ## Commands are expected to be sent to cmd.exe shell for Windows case
+                git_clone_command = ["git", "clone"]
+                if branch:
+                    git_clone_command.append("-b")
+                    git_clone_command.append(branch)
+                if blobless_clone:
+                    git_clone_command.append("--filter=blob:none")
+                git_clone_command.append(self.repo_url)
+
+                command = [
+                    "cd",
+                    str(self.payload_parent_dir.absolute()),
+                    "&&",
+                ]
+                for c in git_clone_command:
+                    command.append(c)
+
+            case _:
+                raise NotImplementedError(f"not yet available for {operating_system=}")
+
+        stdout, stderr, returncode = handle_shell_command(command)
+
+        if not self.payload_dir.is_dir() or returncode != 0:
+            print(f"command={' '.join(command)}")
+            print(f"{stdout=}")
+            print(f"{stderr=}")
             raise RuntimeError("failed to create payload dir")
 
         return self.payload_dir
-
-    def handle_shell_command(self, command: list[str]) -> tuple[str, str, int]:
-        """handles commands to the shell. returns a tuple of
-        (stdout, stderr, returncode)
-        """
-        p0 = subprocess.run(command, capture_output=True, shell=True)
-        stdout = p0.stdout.decode("utf-8")
-        stderr = p0.stderr.decode("utf-8")
-        return stdout, stderr, p0.returncode
 
     def check_git_output(self, stdout: str, stderr: str):
         if "Changes not staged for commit" in stdout:
@@ -142,6 +192,7 @@ class GitManager:
             print(f"{stdout=}")
             print(f"{stderr=}")
             raise GitNotCleanError("unexpected stdout. please check git status")
+
 
 class LocalManager:
     base_dir: Optional[Path] = None
@@ -166,29 +217,62 @@ class LocalManager:
         return self.git_payload_dir
 
     def run_zip(self, exclude_git_folder=False) -> int:
+        """run zip using shell on OSX/Linux, use python shutil to zip on win
+        exclude_git_folder is ignored in win
+
+        :param exclude_git_folder: excludes the .git folder (reduces size ),
+        but loses access to git version control, defaults to False
+        :type exclude_git_folder: bool, optional
+        :raises RuntimeError: _description_
+        :raises NotImplementedError: _description_
+        :return: return code for the zip function
+        :rtype: int
+        """
+
         print("zipping...")
         if not self.git_payload_dir:
             raise RuntimeError("git_payload_dir is not init. please run_git() first")
         self.payload_filepath = (
             self.git_payload_dir.parent / f"payload-{APP_NAME}-{utils.get_time()}.zip"
         )
-        if exclude_git_folder:
-            command = [
-                f"cd {self.git_payload_dir} ; zip -r {self.payload_filepath} . -x '.git/*'"
-            ]
-        else:
-            command = [f"cd {self.git_payload_dir} ; zip {self.payload_filepath} . -r"]
-        p0 = subprocess.run(command, shell=True)
-        return p0.returncode
+
+        fnReturnCode = -1
+        match (operating_system := platform.system()):
+            case "Darwin" | "Linux":
+                ## Commands are expected to be sent to bash
+
+                if exclude_git_folder:
+                    command = [
+                        f"cd {self.git_payload_dir} ; zip -r {self.payload_filepath} . -x '.git/*'"
+                    ]
+                else:
+                    command = [
+                        f"cd {self.git_payload_dir} ; zip {self.payload_filepath} . -r"
+                    ]
+                _, _, fnReturnCode = handle_shell_command(command)
+
+            case "Windows":
+                ## cmd.exe shell does not have zip tool, use python shutil
+                payload_filepath_ = f"{self.payload_filepath.absolute()}".split(".")[
+                    0
+                ]  # shutil has special requirements of no extensions
+                shutil.make_archive(payload_filepath_, "zip", self.git_payload_dir)
+                if self.payload_filepath.is_file():
+                    fnReturnCode = 0
+
+            case _:
+                raise NotImplementedError(f"not yet available for {operating_system=}")
+
+        return fnReturnCode
 
     def cleanup(self) -> None:
         print("cleaning up...")
         try:
             if self.git_payload_dir:
-                shutil.rmtree(self.git_payload_dir)
+                shutil.rmtree(self.git_payload_dir, onerror=handle_readonly_error)
+            print("cleanup complete")
         except OSError as e:
             print(f"{e=}")
-        print("cleanup complete")
 
 
 class RemoteManager:
@@ -355,6 +439,7 @@ class RemoteManager:
         if not self.check_conda():
             print(f"WANRING: Anaconda (python3.10) is required to run {app_name}")
         print("install script end")
+        print("Usage: \n  conda activate\n  python {phdf-path/cli.py} {jsonString} {outpath.h5}\n  python {phdf-path/cli.py} {jsonFile.txt} {outpath.h5}")
 
 
 class CliParser(argparse.ArgumentParser):
@@ -530,5 +615,5 @@ def test_git_manager():
 
 if __name__ == "__main__":
     dotenv.load_dotenv()
-    # cli()
-    test_git_manager()
+    cli()
+    # test_git_manager()
