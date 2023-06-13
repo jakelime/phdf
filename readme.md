@@ -351,6 +351,43 @@ programmed into the SMT test program.
     `win7` is possible. Remove the type hints and replace `match`
     statements with `if else` statements.
 
+#### Setting up Bash on Windows using WSL
+
+1.  Download the Windows Subsystem for Linux, developed by Microsoft
+    from the [Microsoft
+    Store](https://www.microsoft.com/store/productId/9P9TQF7MRM4R)
+
+2.  Activate your shell by typing `bash` in cmd / pwsh
+
+    Remember update your shell as standard practices
+
+    ``` bash
+    sudo apt-get update
+    sudo apt-get upgrade
+    ```
+
+    Get the usual tools we need (it might not be pre-installed,
+    depending on which WSL you chose)
+
+    ``` bash
+    sudo apt-get install zip
+    sudo apt-get install dos2unix
+    ```
+
+3.  Download and install
+    [miniconda](https://docs.conda.io/en/latest/miniconda.html) on the
+    WSL
+
+    Yes, do we have to perform this step (again) because WSL is a
+    separate kernel and we need conda linux to be running there
+
+4.  You are ready.
+
+    Run `dos2unix make_venv.sh` to convert the shell script into Unix
+    file format
+
+    Run `bash make_venv.sh`
+
 #### Using `Pyinstaller`
 
 Always use `pyinstaller` on a dedicated virtual environment! This will
@@ -368,8 +405,8 @@ Remote tester: `rbgv93k0001.int.osram-light.com`
 
 On your local machine with internet access,
 
-1.  Download latest Anaconda (python3.10) Linux
-    [distribution](https://www.anaconda.com/download#downloads)
+1.  Download latest Anaconda (python3.10) [Linux
+    distribution](https://www.anaconda.com/download#downloads)
 
 2.  Donwnload this repo using the `Download` button or `git clone`
     (don\'t forget to zip it for uploading)
