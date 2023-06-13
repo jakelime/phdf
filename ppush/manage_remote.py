@@ -29,15 +29,15 @@ class RemoteManager:
         self._password = os.environ.get(EnvVars.REMOTE_PASSWORD.value)
         if not self._password:
             raise EnvironmentVarError(
-                f"{EnvVars.REMOTE_PASSWORD} not found in env vars"
+                f"{EnvVars.REMOTE_PASSWORD.value} not found in env vars"
             )
 
         self.remote_server = (
-            os.environ.get("REMOTE_SERVER") if not remote_server else remote_server
+            os.environ.get(EnvVars.REMOTE_SERVER.value) if not remote_server else remote_server
         )
         if not self.remote_server:
             raise EnvironmentVarError(
-                f"{EnvVars.REMOTE_SERVER} not specified not found in env vars"
+                f"{EnvVars.REMOTE_SERVER.value} not specified not found in env vars"
             )
 
         self.ssh_client = paramiko.SSHClient()
