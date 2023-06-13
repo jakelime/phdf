@@ -140,6 +140,32 @@ To distribute to remote testers
             python {phdf-path/cli.py} {jsonFile.txt} {outpath.h5}
 
 
+#. If you get ``EnvironmentVarError``, you will first need to set up your environment variables
+
+   .. code-block:: powershell
+
+        (venv) PS C:\Users\jli8\activedir\phdf> python push.py -tc
+        testing connection to remote server...
+        connx error. e=EnvironmentVarError('REMOTE_SERVER not specified not found in env vars')
+        connx error. e=EnvironmentVarError('REMOTE_USER not specified and not found in env vars')
+        connx error. e=EnvironmentVarError('REMOTE_PASSWORD not found in env vars')
+
+   One easy way to do so is to create ``.env`` file in the ``root dir``. We use ``python-dotenv``
+   to manage these environment variables. This repo is configured such that your ``.env`` containing
+   sensitive information such as your passwords will not be sync-ed into the repository.
+
+   .. code-block:: python
+
+        ## ./.env
+        REMOTE_USER="j.lim2"
+        REMOTE_PASSWORD="xxx"
+        REMOTE_SERVER="rbgv93k0002"
+
+   You could also find your environment variables using
+   `Powershell guide here<https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_environment_variables?view=powershell-7.3>`_
+   or, using ``~/.bash_profile`` in `bash guide here<https://www.digitalocean.com/community/tutorials/how-to-read-and-set-environmental-and-shell-variables-on-linux>`_
+
+
 **On the remote tester**
 
 #. If Anaconda has not been installed, please download and install latest Anaconda for Linux
@@ -331,9 +357,17 @@ Setting up Python environment
    .. code-block:: bash
 
         ## Using python==3.10
-        python3 -m venv venv
+        conda create -n p310 python=3.10
+        conda activate p310
+        ## For pwsh: where.exe python
+        which python3
+        python3 -m venv venv --copies
+        conda deactivate
+        ## For pwsh: .\venv\Scripts\activate
         source ./venv/bin/activate
+        ## For pwsh: where.exe python
         which python
+        python -m pip install --upgrade pip
         pip install tables
         pip install pandas
         pip install pyinstaller
@@ -381,43 +415,6 @@ Setting up Python environment
    type hints and replace ``match`` statements with ``if else`` statements.
 
 
-Setting up Bash on Windows using WSL
-================================================================================================
-
-#. Download the Windows Subsystem for Linux, developed by Microsoft from the
-   `Microsoft Store <https://www.microsoft.com/store/productId/9P9TQF7MRM4R>`_
-
-#. Activate your shell by typing ``bash`` in cmd / pwsh
-
-   Remember update your shell as standard practices
-
-   .. code-block:: bash
-
-    sudo apt-get update
-    sudo apt-get upgrade
-
-
-   Get the usual tools we need (it might not be pre-installed, depending on which WSL you chose)
-
-   .. code-block:: bash
-
-    sudo apt-get install zip
-    sudo apt-get install dos2unix
-
-
-#. Download and install `miniconda <https://docs.conda.io/en/latest/miniconda.html>`_ on the WSL
-
-   Yes, do we have to perform this step (again) because WSL is a separate kernel and we need conda linux
-   to be running there
-
-
-#. You are ready.
-
-   Run ``dos2unix make_venv.sh`` to convert the shell script into Unix file format
-
-   Run ``bash make_venv.sh``
-
-
 
 Using ``Pyinstaller``
 ================================================================================================
@@ -436,6 +433,15 @@ related to dependencies.
 
 Outdated instructions
 ================================================================================================
+
+These are some deprecated instructions that have been left over from previous versions
+
+New versions include automated scripts to run these instructions.
+
+
+
+Manual installation process
+------------------------------------------------------------------------------------------------
 
 Remote tester: ``rbgv93k0001.int.osram-light.com``
 
@@ -596,3 +602,34 @@ Now, remote access into the linux machine
 First, install ``Anaconda``
 
 #. ``sh Anaconda3-2023.03-1-Linux-x86_64.sh``
+
+
+
+Setting up Bash on Windows using WSL
+------------------------------------------------------------------------------------------------
+
+#. Download the Windows Subsystem for Linux, developed by Microsoft from the
+   `Microsoft Store <https://www.microsoft.com/store/productId/9P9TQF7MRM4R>`_
+
+#. Activate your shell by typing ``bash`` in cmd / pwsh
+
+   Remember update your shell as standard practices
+
+   .. code-block:: bash
+
+    sudo apt-get update
+    sudo apt-get upgrade
+
+
+   Get the usual tools we need (it might not be pre-installed, depending on which WSL you chose)
+
+   .. code-block:: bash
+
+    sudo apt-get install zip
+    sudo apt-get install dos2unix
+
+
+#. Download and install `miniconda <https://docs.conda.io/en/latest/miniconda.html>`_ on the WSL
+
+   Yes, do we have to perform this step (again) because WSL is a separate kernel and we need conda linux
+   to be running there
