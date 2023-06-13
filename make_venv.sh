@@ -25,7 +25,8 @@ create_python_environment() {
 
     create_conda_environment
 
-    if [[ -d "venv" ]]; then
+    if [[ -d "venv" ]]
+    then
         echo "removing existing $PYTHON_VENV_NAME..."
         rm -rf "$PYTHON_VENV_NAME"
     fi
@@ -68,7 +69,8 @@ main() {
 
     create_python_environment
 
-    if [[ "$installMode" == "full" ]]; then
+    if [[ "$installMode" == "full" ]]
+    then
         echo "installMode is $installMode"
         install_python_libraries_full
     else
