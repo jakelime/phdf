@@ -7,16 +7,55 @@ Notice
 v1.0.0+ has major code changes, implemented a solution with well structured
 OOP and also used real examples from the actual test program IO.
 
-TODO:
-------------------------------------------------------------------------------------------------
 
 
 ************************************************************************************************
-Usage
+Installation basics
 ************************************************************************************************
 
-From ``python``
+Basic cloning
 ================================================================================================
+
+This project contains submodules which means that you need to recursively. If you had forgotten
+to clone  recursively, refer to below for advanced installation guide.
+
+.. code-block:: bash
+
+   git clone --recurse-submodules https://gittf.ams-osram.info/os-opto-dev/phdf
+
+
+
+Basic distribution
+================================================================================================
+
+We used some of the DevOps techniques to make distribution efficient.
+
+Use ``ppush`` to distribute this repo into tester in 1 step.
+
+.. code-block:: bash
+
+   # Use any of the commands
+   python push.py --help
+   python push.py --test_connection
+   python push.py --push
+   python push.py --push_specify_server rbgv93k0002.int.osram-light.com
+   python push.py -ps rbgv93k0003.int.osram-light.com
+
+
+However, you do need to set up your environment for first use (environment variables for
+username and passwords).
+
+
+************************************************************************************************
+``PHDF`` Usage
+************************************************************************************************
+
+PHDF API Calls
+================================================================================================
+
+For now, we use python to run these calls.
+In the future, we can compile this to distributed executable, to make shorten and simply these
+API commands.
 
 .. code-block:: bash
 
@@ -49,7 +88,7 @@ Do take care of the double quotes ``"`` and single quotes  ``'``.
 
 
 
-Interfacing to Java using subprocess to call python
+Using Java to interface the PHDF API calls
 ================================================================================================
 
 We will use Java's ``ProcessBuilder builder = new ProcessBuilder(command);``,
@@ -85,10 +124,36 @@ Output:
 
 
 ************************************************************************************************
-Installation
+Advanced Installation Guide
 ************************************************************************************************
 
-Some of the DevOps features are available in this repo.
+Cloning using ``git``
+================================================================================================
+
+This project contains submodules. You need to clone recursively.
+
+.. code-block:: bash
+
+   git clone --recurse-submodules https://gittf.ams-osram.info/os-opto-dev/phdf
+
+
+If you forot to clone recursively and did a normal clone, the submodules will be empty.
+
+You will then need to call `init` and `update` manually.
+
+.. code-block:: powershell
+
+   PS C:\Users\jli8\activedir\test> git clone git.gittf.ams-osram.info:os-opto-dev/phdf.git
+   Cloning into 'phdf'...
+   Resolving deltas: 100% (178/178), done.
+
+   PS C:\Users\jli8\activedir\test> cd .\phdf\
+   PS C:\Users\jli8\activedir\test\phdf> git submodule init
+   Submodule 'ppush' (git@gittf.ams-osram.info:os-opto-dev/ppush.git) registered for path 'ppush'
+
+   PS C:\Users\jli8\activedir\test\phdf> git submodule update
+   Cloning into 'C:/Users/jli8/activedir/test/phdf/ppush'...
+   Submodule path 'ppush': checked out '6628126d09739fda90c6fe9942dcebe921e9f98d'
 
 
 To distribute to remote testers
@@ -242,6 +307,16 @@ script to install the full environment (bare minimum + push + test).
 Notes
 ************************************************************************************************
 
+
+TODO:
+================================================================================================
+
+- nil
+
+
+Problem: data string overflow in ``shell``
+================================================================================================
+
 Unfortunately, we will face problems if we try to pass the entire ``JSON string``
 into the command. The length of the string is too long (``length=1356801``), which
 gives us ``error=7, Argument list too long``.
@@ -344,7 +419,6 @@ tools to install the entire test program here in
 `smt8-hdf <https://gittf.ams-osram.info/os-opto-dev/smt8-hdf>`_, which is another
 repo with the full test program with the interface already programmed into the
 SMT test program.
-
 
 
 
