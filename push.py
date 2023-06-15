@@ -147,7 +147,6 @@ def cli():
         help="Test SSH connection to the remote server(s), and gittf",
         function=run_test_remote_connx,
     )
-
     parser.add_argument_and_store_function(
         "-p",
         "--push",
@@ -192,21 +191,7 @@ For testing purposes",
         function=new_dev_function,
     )
 
-    args = parser.parse_args()
-
-    counter = 0
-    for kw, v in args._get_kwargs():
-        if v:
-            if isinstance(v, bool):
-                parser.fn_storage[kw]()  # executes the function
-                counter += 1
-            elif isinstance(v, str):
-                parser.fn_storage[kw](v)  # executes the function with arg
-                counter += 1
-            break  # only execute 1 function, even if there are multiple flags passed
-
-    if counter == 0:
-        parser.error("no args specified. use --help for more information")
+    parser.run_parser(stop_on_first_function=True)
 
 
 if __name__ == "__main__":
