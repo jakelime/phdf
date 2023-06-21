@@ -18,7 +18,6 @@ public class Phdf {
         this.myDocPath = FileSystemView.getFileSystemView().getDefaultDirectory().getPath();
         this.pythonPath = myDocPath + "/anaconda3/bin/python";
         this.cliPath = myDocPath + "/gitRepos/phdf/cli.py";
-        initCommand();
         System.out.println("PhdfProcess initialized");
     }
 
@@ -89,10 +88,16 @@ public class Phdf {
     }
 
     public int run(String dataString, String targetDir) {
-
+        initCommand();
         appendUserInputToCommand(dataString, targetDir);
-        System.out.println(
-                " >> calling subprocess phdf (data.length=" + this.dataString.length() + ") " + this.targetDir);
+        int n = this.dataString.length();
+        if (n > 1000) {
+            System.out.println(
+                    " >> calling subprocess phdf (data.length=" + n + ") " + this.targetDir);
+        } else {
+            System.out.println(
+                    " >> calling subprocess phdf " + this.dataString + " " + this.targetDir);
+        }
 
         ProcessBuilder builder = new ProcessBuilder(this.command);
         Process process;

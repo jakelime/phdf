@@ -4,12 +4,7 @@ from typing import Mapping, NamedTuple, Optional
 from pathlib import Path
 import pandas as pd
 
-APP_NAME = "phdf"
-# local libraries
-if __name__.startswith(APP_NAME):
-    from . import utils
-else:
-    import utils
+from phdf import utils
 
 
 @dataclass
@@ -164,9 +159,4 @@ class DevicePixelArray:
         return self.outpath
 
     def cleanup(self):
-        pass
-
-
-if __name__ == "__main__":
-    log = utils.setup_logger()
-    log.error("Not implemented. Please use cli instead")
+        print("cleanup doing nothing")
