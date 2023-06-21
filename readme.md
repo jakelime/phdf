@@ -231,16 +231,28 @@ INFO    : 19: appended(site2_partId1_aTB_9) to 'testfilewriter-2047225563688979-
 
 ### Changelogs
 
+- v1.1.0
+  - updated readme
+  - updated PHDF core codes (tidy up)
+  - updated test to work with new codes
+  - added new CLI arguments
+    - skip_cleanup
+    - measure_timing
+  - cleaned up Java entry points, for better doucmentation
+
 - v1.0.5
   - added push.py for DevOps
+
 - v1.0.3
   - added pytest, with a total of 4 critical basic tests
     - 2 tests to CLI for invalid arguments given
     - test to CLI using JSON string
     - test to CLI using File as input
+
 - v1.0.2
   - updated readme
   - updated java codes and entry points
+
 - v1.0.0 / v1.0.1
   - Properly structured into `models.py`, `views.py` and `main.py`
         (presenter)
@@ -253,15 +265,18 @@ INFO    : 19: appended(site2_partId1_aTB_9) to 'testfilewriter-2047225563688979-
         dataframe and plot pixelMaps
   - `models.py` defines the working model, data structures of our
         device
+
 - v0.0.2
   - Packaged java class `Phdf` into a separate package
   - `Main.java` will be an entry point to instantiate `process`
         object, then call `process.run()` method to execute
+
 - v0.0.3
   - Worked out some kinks during debugging when integrating into
         SMT8
   - `Phdf.java`: some hard-coded variables are now changed to match
         environment of `rbgv93k0001.int.osram-light.com`
+
 - v0.0.1
   - first draft version released
 
