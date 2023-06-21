@@ -155,7 +155,7 @@ class DevicePixelArray:
                 mode="a",
                 complevel=self.h5_compression_level,
             )
-            self.log.info(f"{i}: appended({table.name}) to  {self.outpath.name=}")
+            self.log.info(f"{i}: appended({table.name}) to {self.outpath.name}")
         return self.outpath
 
     def cleanup(self):
