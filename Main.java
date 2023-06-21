@@ -29,7 +29,7 @@ public class Main {
         processor.setCliPath("/Users/jli8/activedir/200-phdf/cli.py"); // for debugging (on JakeMBP)
          // for debugging (on JakeMBP)
 
-        // Run the PHDF
+        // Run PHDF
 
         // Using method 1
         // processor.run(jsonString, "/Users/jli8/Downloads"); // Unfortunately, we get error=7, Argument list too long

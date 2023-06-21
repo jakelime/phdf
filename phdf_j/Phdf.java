@@ -25,6 +25,8 @@ public class Phdf {
         this.command = new ArrayList<>();
         appendCommand(this.pythonPath);
         appendCommand(this.cliPath);
+        appendCommand("--measure_timing");
+        appendCommand("--skip_cleanup");
         System.out.println("command iniialized: " + this.command);
     }
 
