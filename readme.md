@@ -1,208 +1,94 @@
 # PHDF: Python HDF5 solution for interfacing with Smartest8
 
-## Notice
+## Quick start
 
-v1.0.0+ has major code changes, implemented a solution with well
-structured OOP and also used real examples from the actual test program
-IO.
+### Simple example, running using python directly
 
-## TODO:
-
-### Usage
-
-#### From `python`
+1. Clone the repo `git@gittf.ams-osram.info:os-opto-dev/phdf.git`
+1. Run `python cli.p arg1 arg2`
 
 ``` bash
 # Use a JSON string
 python cli.py '{"partId": {"R00C00": { "site1":{"aTB_0": "0.0"}}}}' '/Users/jli8/Downloads'
 
-# Use a file.txt, containing a list of the JSON strings separated by commas
-python cli.py /Users/jli8/activedir/200-phdf/resources/testfilewriter-2047225563688979.txt /Users/jli8/Downloads
-python python cli.py ~/python_repos/phdf/resources/testfilewriter-2047225563688979.txt ~/Documents
+# Use a FileIO (a temporary file with JSON strings separated by commas)
+python cli.py ~/phdf/resources/testfilewriter-2047225563688979.txt ~/Downloads
 ```
 
-The `cli` needs 2 arguments
+To improve, we can compile a distributable app with syslink to system path `phdf`, then run
 
-**data_input**
+``` bash
+# phdf arg1 agrg2
+phdf ~/phdf/resources/testfilewriter-2047225563688979.txt ~/Downloads
+```
 
-:   accept a filepath, or `JSON` string in a specific format.
+## Details
 
-**output_dir**
+PHDF is a CLI(command line interface) tool that takes in 2 arguments
 
-:   accept a file directory. Exception will be raised if dir does not
+1. **data_input**
+
+   accept a filepath, or `JSON` string in a specific format.
+
+1. **output_dir**
+
+    accept a file directory. Exception will be raised if dir does not
     exist.
 
-*JSON String format*
+Notes:
 
-:   Must be a string that in this format:
+1. *JSON String format*
+
+    Must be a string that in this format:
     `{"partId": {"R00C00": {"site1":{"aTB_0": "0.0"}}}}`.
 
-Do take care of the double quotes `"` and single quotes `'`.
+1. Do take care of the double quotes `"` and single quotes `'`.
 
--   `Java` specifies that `String` must be enclosed with `"`
--   `JSON` specifies that `key` and `values` must be enclosed with `"`
--   In `python`, `"` or `'` can be interchanged with flexibility
--   In `bash`, `'` means literal strings, we can use it to encase like
-    this `'{"a": "1"}'`
+   - `Java` specifies that `String` must be enclosed with `"`
+   - `JSON` specifies that `key` and `values` must be enclosed with `"`
+   - In `python`, `"` or `'` can be interchanged with flexibility
+   - In `bash`, `'` means literal strings, we can use it to encase like this `'{"a": "1"}'`
 
-#### Interfacing to Java using subprocess to call python
+### Interfacing to Java using subprocess to call python
 
 We will use Java\'s
 `ProcessBuilder builder = new ProcessBuilder(command);`,
 
 A simple example of how to implement:
 
--   `Main.java` is the entry point to call `Phdf.java`
--   `Phdf` java class is basically a process builder/manager to a call a
-    new process
--   We use the `Phdf` class to intiate a subprocess call to
-    `python cli commands`
+- `Main.java` is the entry point to call `Phdf.java`
+- `Phdf` java class is a process builder/manager to a create a new process instance
+- We use this instance a subprocess thread using the shell, `python cli.py arg1 arg2`
 
 A simple execution example:
 
 ``` java
 public static void main(String[] args) {
-    // Initialize
+
     Phdf processor = new Phdf();
-    // Run the CLI tool
     processor.run("{\"partId1\": {\"R00C00\": { \"site1\":{\"aTB_0\": \"0.0\"}}}}", "/Users/jli8/Downloads");
+
 }
 ```
 
 Output:
 
 ``` bash
-(p311) ➜  200-phdf git:(wip) ✗ javac Main.java
-(p311) ➜  200-phdf git:(wip) ✗ java Main
+ ➜  200-phdf git:(wip) ✗ javac Main.java
+ ➜  200-phdf git:(wip) ✗ java Main
 PhdfProcess initialized
-command iniialized: [/Users/jli8/miniconda3/envs/p311/bin/python, /Users/jli8/activedir/200-phdf/cli.py]
+command initialized, /Users/jli8/miniconda3/envs/p311/bin/python, /Users/jli8/activedir/200-phdf/cli.py
 >> calling subprocess phdf (data.length=52) /Users/jli8/Downloads
-INFO    : 0: appended(site1_partId1_aTB_0) to  self.outpath.name='nil-20230607_090809-cp3.h5'
+INFO    : 0: appended(site1_partId1_aTB_0) to 'nil-20230607_090809-cp3.h5'
 >> phdf completed with exitCode=0
 ```
 
-### Installation
+## Testing
 
-Some of the DevOps features are available in this repo.
-
-#### To distribute to remote testers
-
-**Requirements:**
-
--   Local machine (`OSX` / `Win`) with connection to both
-    `Remote Tester` and `gittf`
--   Remote tester: `rbgv93k0001.int.osram-light.com`
-
-**On your the local machine**
-
-1.  Set up your SSH connection to the `gitf repo` if you haven\'t
-    already done so. SSH setup guide is available in Github/Gitlab docs
-    and also some of my other project\'s readme.
-
-2.  Test your connection to `remote tester` and `gittf` using
-    `python push.py -tc`
-
-    ``` bash
-    (p311) ➜  200-phdf git:(debugPs) ✗ python push.py -tc
-    testing connection to remote server...
-    >> ssh connection passed: rbgv93k0001.int.osram-light.com
-    testing SSH connection to gittf...
-    Welcome to GitLab, @jake.lim!
-    ```
-
-3.  Run the push command: `python push.py --push`
-
-    > ``` bash
-    > (p311) ➜  200-phdf git:(debugPs) python push.py -p
-    > cloning git from online repository...
-    > >> self.repo_url='git@gittf.ams-osram.info:os-opto-dev/phdf.git':
-    > zipping...
-    > cleaning up...
-    > self.sftp_client.getcwd()='/home/j.lim2/Downloads'
-    > uploading payload //Downloads/payload-phdf-20230612_145919.zip ...
-    > making dir(python_repos/phdf) on remote server...
-    > Archive:  payload-phdf-20230612_145919.zip
-    > ...
-    > cleaning up ...
-    > conda 23.3.1 installed on j.lim2@rbgv93k0001.int.osram-light.com
-    > install script end
-    > Usage:
-    > conda activate
-    >     python {phdf-path/cli.py} {jsonString} {outpath.h5}
-    >     python {phdf-path/cli.py} {jsonFile.txt} {outpath.h5}
-    > ```
-
-4.  If you get `EnvironmentVarError`, you will first need to set up your
-    environment variables
-
-    ``` powershell
-    (venv) PS C:\Users\jli8\activedir\phdf> python push.py -tc
-    testing connection to remote server...
-    connx error. e=EnvironmentVarError('REMOTE_SERVER not specified not found in env vars')
-    connx error. e=EnvironmentVarError('REMOTE_USER not specified and not found in env vars')
-    connx error. e=EnvironmentVarError('REMOTE_PASSWORD not found in env vars')
-    ```
-
-    One easy way to do so is to create `.env` file in the `root dir`. We
-    use `python-dotenv` to manage these environment variables. This repo
-    is configured such that your `.env` containing sensitive information
-    such as your passwords will not be sync-ed into the repository.
-
-    ``` python
-    ## ./.env
-    REMOTE_USER="j.lim2"
-    REMOTE_PASSWORD="xxx"
-    REMOTE_SERVER="rbgv93k0002"
-    ```
-
-    You could also find your environment variables using [Powershell
-    guide
-    here](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_environment_variables?view=powershell-7.3)
-    or, using `~/.bash_profile` in [bash guide
-    here](https://www.digitalocean.com/community/tutorials/how-to-read-and-set-environmental-and-shell-variables-on-linux)
-
-**On the remote tester**
-
-1.  If Anaconda has not been installed, please download and install
-    latest Anaconda for Linux
-    [distribution](https://www.anaconda.com/download#downloads)
-
-2.  Either connect by using `SSH` into the remote tester, or `VNC` to
-    use the terminal `shell` .
-
-3.  The `phdf` application is installed in `~/python_repos/phdf`
-
-    The `python` path for Anaconda (default) is installed in
-    `~/anaconda3/bin/python`
-
-    Test the app by running the command in your shell:
-
-    `python cli.py {jsonString} {outputPath}`
-
-    ``` bash
-    [j.lim2@rbgv93k0001 ~]$ ~/anaconda3/bin/python ~/python_repos/phdf/cli.py '{"partId": {"R00C00": { "site1":{"aTB_0": "0.0"}}}}' ~/Documents
-    INFO    : 0: appended(site1_partId_aTB_0) to  self.outpath.name='nil-20230612_151141-cp3.h5'
-    ```
-
-4.  Or, if you are familiar with using `conda`, do it the proper way
-
-    ``` bash
-    [j.lim2@rbgv93k0001 phdf]$ conda activate
-    (base) [j.lim2@rbgv93k0001 phdf]$ python cli.py ~/python_repos/phdf/resources/testfilewriter-2047225563688979.txt ~/Documents
-    INFO    : 0: appended(site1_partId1_aTB_0) to  self.outpath.name='testfilewriter-2047225563688979-cp3.h5'
-    ...
-    INFO    : 18: appended(site2_partId1_aTB_8) to  self.outpath.name='testfilewriter-2047225563688979-cp3.h5'
-    INFO    : 19: appended(site2_partId1_aTB_9) to  self.outpath.name='testfilewriter-2047225563688979-cp3.h5'
-    ```
-
-### Running `pytest`
-
-There is a full code testing suite in the `tests` dir .Run `pytest` from
-your cli to ensure that the code is working properly
+Pytest is used in this repository for running DevOps and code testing.
 
 ``` bash
 cd tests
-pytest # You can run simply without any flag, then you will only see warnings and errors
 pytest -v # -v is a verbose flag, to show you which are tests running
 ```
 
@@ -225,18 +111,14 @@ test_cli.py::test_cli[using FileIO] PASSED                                      
 =============================================== 4 passed in 6.30s ================================================
 ```
 
-You can get pytest using `pip install pytest` on your own environment or
-simply use the DevOps installation script to install the full
-environment (bare minimum + push + test).
-
 ### Notes
 
 Unfortunately, we will face problems if we try to pass the entire
 `JSON string` into the command. The length of the string is too long
 (`length=1356801`), which gives us `error=7, Argument list too long`.
 
-One alternative is to write the data using `FileIO`, then pass the
-filepath to the command.
+To fix this problem, we the data to a file using `FileIO`, then pass the
+filepath to the command line.
 
 ``` java
 import eviyos2g.lib.shared.common.util.CustomFileWriter;
@@ -256,57 +138,54 @@ public static void main(String[] args) {
 Output:
 
 ``` bash
-(p311) ➜  200-phdf git:(wip) ✗ javac Main.java
-(p311) ➜  200-phdf git:(wip) ✗ java Main
+ ➜  phdf git:(wip) ✗ javac Main.java
+ ➜  phdf git:(wip) ✗ java Main
 intiailised filepath = /Users/jli8/activedir/200-phdf/resources/testfilewriter-2047225563688979.txt
-jsonString length is 1356801
-command iniialized: [/Users/jli8/anaconda3/bin/python, /Users/jli8/gitRepos/phdf/cli.py]
-PhdfProcess initialized
-command iniialized: [/Users/jli8/miniconda3/envs/p311/bin/python, /Users/jli8/activedir/200-phdf/cli.py]
->> calling subprocess phdf (data.length=76) /Users/jli8/Downloads
-INFO    : 0: appended(site1_partId1_aTB_0) to  self.outpath.name='testfilewriter-2047225563688979-cp3.h5'
-INFO    : 1: appended(site1_partId1_aTB_1) to  self.outpath.name='testfilewriter-2047225563688979-cp3.h5'
+command initialized: /Users/jli8/miniconda3/envs/p311/bin/python, /Users/jli8/activedir/200-phdf/cli.py
+>> calling subprocess phdf
+INFO    : 0: appended(site1_partId1_aTB_0) to 'testfilewriter-2047225563688979-cp3.h5'
+INFO    : 1: appended(site1_partId1_aTB_1) to 'testfilewriter-2047225563688979-cp3.h5'
 ...
-INFO    : 18: appended(site2_partId1_aTB_8) to  self.outpath.name='testfilewriter-2047225563688979-cp3.h5'
-INFO    : 19: appended(site2_partId1_aTB_9) to  self.outpath.name='testfilewriter-2047225563688979-cp3.h5'
+INFO    : 18: appended(site2_partId1_aTB_8) to 'testfilewriter-2047225563688979-cp3.h5'
+INFO    : 19: appended(site2_partId1_aTB_9) to 'testfilewriter-2047225563688979-cp3.h5'
 >> phdf completed with exitCode=0
 ```
 
 ### Changelogs
 
--   v1.0.5
-    -   added push.py for DevOps
--   v1.0.3
-    -   added pytest, with a total of 4 critical basic tests
-        -   2 tests to CLI for invalid arguments given
-        -   test to CLI using JSON string
-        -   test to CLI using File as input
--   v1.0.2
-    -   updated readme
-    -   updated java codes and entry points
--   v1.0.0 / v1.0.1
-    -   Properly structured into `models.py`, `views.py` and `main.py`
+- v1.0.5
+  - added push.py for DevOps
+- v1.0.3
+  - added pytest, with a total of 4 critical basic tests
+    - 2 tests to CLI for invalid arguments given
+    - test to CLI using JSON string
+    - test to CLI using File as input
+- v1.0.2
+  - updated readme
+  - updated java codes and entry points
+- v1.0.0 / v1.0.1
+  - Properly structured into `models.py`, `views.py` and `main.py`
         (presenter)
-    -   Entry point will be `cli.py` where it calls \"launcher\" from
+  - Entry point will be `cli.py` where it calls \"launcher\" from
         `presenter`
-    -   `cli.py` reworked with `argparse` for fully supported CLI with
+  - `cli.py` reworked with `argparse` for fully supported CLI with
         help and instructions
-    -   `tests.py` structured to be used for code testing
-    -   `views.py` primary function is to interact the data, view
+  - `tests.py` structured to be used for code testing
+  - `views.py` primary function is to interact the data, view
         dataframe and plot pixelMaps
-    -   `models.py` defines the working model, data structures of our
+  - `models.py` defines the working model, data structures of our
         device
--   v0.0.2
-    -   Packaged java class `Phdf` into a separate package
-    -   `Main.java` will be an entry point to instantiate `process`
+- v0.0.2
+  - Packaged java class `Phdf` into a separate package
+  - `Main.java` will be an entry point to instantiate `process`
         object, then call `process.run()` method to execute
--   v0.0.3
-    -   Worked out some kinks during debugging when integrating into
+- v0.0.3
+  - Worked out some kinks during debugging when integrating into
         SMT8
-    -   `Phdf.java`: some hard-coded variables are now changed to match
+  - `Phdf.java`: some hard-coded variables are now changed to match
         environment of `rbgv93k0001.int.osram-light.com`
--   v0.0.1
-    -   first draft version released
+- v0.0.1
+  - first draft version released
 
 ### Environment Setup and Installation
 
@@ -320,7 +199,7 @@ programmed into the SMT test program.
 
 #### Setting up Python environment
 
-1.  We use standard python packaging techniques here. A simple example
+1. We use standard python packaging techniques here. A simple example
     for bare minimal install manually:
 
     ``` bash
@@ -341,7 +220,7 @@ programmed into the SMT test program.
     pip install pyinstaller
     ```
 
-2.  Another one of the standard methods to install from pip
+2. Another one of the standard methods to install from pip
     requirements.txt:
 
     ``` bash
@@ -358,7 +237,7 @@ programmed into the SMT test program.
     pip freeze > requirements.txt
     ```
 
-3.  Use `Bash` script for automated `venv` execution. This method will
+3. Use `Bash` script for automated `venv` execution. This method will
     pull the latest versions of depedencies from PyPI. It should work
     most of the time, but not guaranteed.
 
@@ -370,7 +249,7 @@ programmed into the SMT test program.
     base make_venv.sh full
     ```
 
-4.  To view the dependencies, read the function
+4. To view the dependencies, read the function
     `install_python_libraries_full` from `make_venv.sh`.
 
     This codebase employs the use of new python syntax such walrus
@@ -412,47 +291,47 @@ Remote tester: `rbgv93k0001.int.osram-light.com`
 
 On your local machine with internet access,
 
-1.  Download latest Anaconda (python3.10) [Linux
+1. Download latest Anaconda (python3.10) [Linux
     distribution](https://www.anaconda.com/download#downloads)
 
-2.  Donwnload this repo using the `Download` button or `git clone`
+2. Donwnload this repo using the `Download` button or `git clone`
     (don\'t forget to zip it for uploading)
 
-3.  Transfer the 2 files into the Linux machine
+3. Transfer the 2 files into the Linux machine
 
-4.  `sftp j.lim2@rbgv93k0001.int.osram-light.com`
+4. `sftp j.lim2@rbgv93k0001.int.osram-light.com`
 
-5.  Check your remote dir using `sftp> pwd`
+5. Check your remote dir using `sftp> pwd`
 
     ``` bash
     Remote working directory: /home/j.lim2/Downloads/
     ```
 
-6.  Check your local dir `sftp> lpwd`
+6. Check your local dir `sftp> lpwd`
 
     ``` bash
     Local working directory: /Users/jli8/Downloads/
     ```
 
-7.  Upload `Anaconda installer` using
+7. Upload `Anaconda installer` using
     `sftp> put /Anaconda3-2023.03-1-Linux-x86_64.sh /Anaconda3-2023.03-1-Linux-x86_64.sh`
 
-8.  Upload `phdf.tar` using `sftp> put /phdf-main.tar /phdf-main.tar`
+8. Upload `phdf.tar` using `sftp> put /phdf-main.tar /phdf-main.tar`
 
 Now, remote access into the linux machine
 
-1.  Open `konsole`
-2.  `cd ~/Downloads/`
+1. Open `konsole`
+2. `cd ~/Downloads/`
 
 First, install `Anaconda`
 
-1.  `sh Anaconda3-2023.03-1-Linux-x86_64.sh`
+1. `sh Anaconda3-2023.03-1-Linux-x86_64.sh`
 
-2.  Follow the on screen instructions to install Anaconda
+2. Follow the on screen instructions to install Anaconda
 
-3.  Allow conda to `conda init`
+3. Allow conda to `conda init`
 
-4.  Run `conda info` command
+4. Run `conda info` command
 
     ``` bash
     active environment : base
@@ -463,11 +342,11 @@ First, install `Anaconda`
 
 Then, unpack `phdf-main` and start using it
 
-1.  Unpack `phdf-main.tar`
+1. Unpack `phdf-main.tar`
 
-2.  `cd /home/j.lim2/phdf-main`
+2. `cd /home/j.lim2/phdf-main`
 
-3.  \[optional\] You can check if python interface is working properly
+3. \[optional\] You can check if python interface is working properly
 
     ``` bash
     python cli.py '{"partId": {"R00C00": { "site1":{"aTB_0": "0.0"}}}}' '/Users/jli8/Downloads'
@@ -475,7 +354,7 @@ Then, unpack `phdf-main` and start using it
     INFO    : 0: appended(site1_partId_aTB_0) to  self.outpath.name='nil-20230607_093843-cp3.h5'
     ```
 
-4.  Modify the path parameters in `phdf_j\Phdf.java`
+4. Modify the path parameters in `phdf_j\Phdf.java`
 
     We need to modify the `Path` parameters, depending on your sys
     environment. In the future, when we figure out packaging and how to
@@ -490,7 +369,7 @@ Then, unpack `phdf-main` and start using it
     }
     ```
 
-5.  Modify the entry point `Main.java`
+5. Modify the entry point `Main.java`
 
     This is just an example. This part code should be living in your
     actual test program.
@@ -518,7 +397,7 @@ Then, unpack `phdf-main` and start using it
     }
     ```
 
-6.  Test out the `java` entry point
+6. Test out the `java` entry point
 
     > ``` bash
     > (p311) ➜  200-phdf git:(wip) ✗ javac Main.java
@@ -531,15 +410,15 @@ Then, unpack `phdf-main` and start using it
     > >> phdf completed with exitCode=0
     > ```
 
-7.  `sftp j.lim2@rbgv93k0001.int.osram-light.com`
+7. `sftp j.lim2@rbgv93k0001.int.osram-light.com`
 
-8.  Check your remote dir using `sftp> pwd`
+8. Check your remote dir using `sftp> pwd`
 
     ``` bash
     Remote working directory: /home/j.lim2/Downloads/
     ```
 
-9.  Check your local dir `sftp> lpwd`
+9. Check your local dir `sftp> lpwd`
 
     ``` bash
     Local working directory: /Users/jli8/Downloads/
@@ -552,20 +431,20 @@ Then, unpack `phdf-main` and start using it
 
 Now, remote access into the linux machine
 
-1.  Open `konsole`
-2.  `cd ~/Downloads/`
+1. Open `konsole`
+2. `cd ~/Downloads/`
 
 First, install `Anaconda`
 
-1.  `sh Anaconda3-2023.03-1-Linux-x86_64.sh`
+1. `sh Anaconda3-2023.03-1-Linux-x86_64.sh`
 
 ## Setting up Bash on Windows using WSL
 
-1.  Download the Windows Subsystem for Linux, developed by Microsoft
+1. Download the Windows Subsystem for Linux, developed by Microsoft
     from the [Microsoft
     Store](https://www.microsoft.com/store/productId/9P9TQF7MRM4R)
 
-2.  Activate your shell by typing `bash` in cmd / pwsh
+2. Activate your shell by typing `bash` in cmd / pwsh
 
     Remember update your shell as standard practices
 
@@ -582,7 +461,7 @@ First, install `Anaconda`
     sudo apt-get install dos2unix
     ```
 
-3.  Download and install
+3. Download and install
     [miniconda](https://docs.conda.io/en/latest/miniconda.html) on the
     WSL
 
