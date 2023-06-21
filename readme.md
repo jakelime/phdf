@@ -2,7 +2,9 @@
 
 ## Quick start
 
-### Simple example, running using python directly
+### Simple example
+
+Running using python directly
 
 1. Clone the repo `git@gittf.ams-osram.info:os-opto-dev/phdf.git`
 1. Run `python cli.p arg1 arg2`
@@ -15,14 +17,36 @@ python cli.py '{"partId": {"R00C00": { "site1":{"aTB_0": "0.0"}}}}' '/Users/jli8
 python cli.py ~/phdf/resources/testfilewriter-2047225563688979.txt ~/Downloads
 ```
 
+### Full implementation with automated distribution
+
+Although we can use this repository standalone, we have also designed to be
+built in as a depedency using `git submodule`.
+
+As such, we can use [Distr SMT Test Programs](https://gittf.ams-osram.info/os-opto-dev/dist_smt_tps)
+for 1-click automated distribution.
+
+``` bash
+git clone --recurse-submodules git@gittf.ams-osram.info:os-opto-dev/dist_smt_tps.git
+python push.py --push
+```
+
+Both `Smartest TestProgram` and `PHDF` (latest versions) will be pushed to the server
+automically.
+
+Just run the `TestProgram` after you push, that is all.
+
+## Future improvement plans
+
 To improve, we can compile a distributable app with syslink to system path `phdf`, then run
 
 ``` bash
-# phdf arg1 agrg2
+# phdf arg1 arg2
 phdf ~/phdf/resources/testfilewriter-2047225563688979.txt ~/Downloads
 ```
 
 ## Details
+
+### Basics
 
 PHDF is a CLI(command line interface) tool that takes in 2 arguments
 
@@ -40,7 +64,10 @@ Notes:
 1. *JSON String format*
 
     Must be a string that in this format:
-    `{"partId": {"R00C00": {"site1":{"aTB_0": "0.0"}}}}`.
+    `{"partId": {"R00C00": {"site1":{"aTB_0": "0.0"}}}}`
+
+    Multiple JSON strings can be separated by commas
+    `{"partId": {"R00C00": {"site1":{"aTB_0": "0.0"}}}}, {"partId": {"R00C01": {"site1":{"aTB_0": "0.0"}}}}`
 
 1. Do take care of the double quotes `"` and single quotes `'`.
 
@@ -48,6 +75,57 @@ Notes:
    - `JSON` specifies that `key` and `values` must be enclosed with `"`
    - In `python`, `"` or `'` can be interchanged with flexibility
    - In `bash`, `'` means literal strings, we can use it to encase like this `'{"a": "1"}'`
+
+### Advanced Options
+
+PHDF is a fully implemented CLI tool, you can use --help flag to display
+options and help information.
+
+```bash
+ ➜  200-phdf git:(main) ✗ python cli.py -h
+usage: phdf [-h] [-scu] [-mt] data_input output_dir
+
+Process given data into hdf5 container
+
+positional arguments:
+  data_input            Accepts 'filepath' |or| 'dataString' in JSON format
+  output_dir            Output directory
+
+options:
+  -h, --help            show this help message and exit
+  -scu, --skip_cleanup  Skips clean up of the temporary.txt files
+  -mt, --measure_timing
+                        Measures time taken for the python process calls
+
+Example: python cli.py '{"partId": {"R00C00": { "site1":{"aTB_0": "0.0"}}}}' '/tmp/sample.h5'
+```
+
+--measure_timing
+
+```bash
+(p311) ➜  200-phdf git:(cleanup) ✗ java Main
+intiailised filepath = /Users/jli8/activedir/200-phdf/resources/testfilewriter-2047225563688979.txt
+PhdfProcess initialized
+command iniialized: /Users/jli8/miniconda3/envs/p311/bin/python, /Users/jli8/activedir/200-phdf/cli.py, --measure_timing
+ >> calling subprocess phdf {"partId1": {"R00C00": { "site1":{"aTB_0": "0.0"}}}} /Users/jli8/Downloads
+INFO    : 0: appended(site1_partId1_aTB_0) to  nil-20230621_141921-cp3.h5
+INFO    : ***** PHDF_time_taken = 0.1903s *****
+
+command iniialized: [/Users/jli8/miniconda3/envs/p311/bin/python, /Users/jli8/activedir/200-phdf/cli.py, --measure_timing]
+ >> calling subprocess phdf /Users/jli8/activedir/200-phdf/resources/testfilewriter-2047225563688979.txt /Users/jli8/Downloads
+INFO    : 0: appended(site1_partId1_aTB_0) to  testfilewriter-2047225563688979-cp3.h5
+...
+INFO    : 19: appended(site2_partId1_aTB_9) to  testfilewriter-2047225563688979-cp3.h5
+INFO    : ***** PHDF_time_taken = 3.3210s *****
+```
+
+--skip_cleanup
+
+By default, the current implementation is that Smartest TestProgram will create a
+temporary file `testfilewriter-2047225563688979-cp3.txt`, then PHDF will read that file to record the
+HDF5 output. PHDF will perform clean up by deleting the temporary file. You can skip removing the
+temporary file by using the `-scs` option. Do note that the HDD will quickly get filled
+up because `.txt` is a very inefficient storage container.
 
 ### Interfacing to Java using subprocess to call python
 
