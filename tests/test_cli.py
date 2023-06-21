@@ -82,7 +82,7 @@ def generate_commands():
     """
     pytest_folder = BASE_DIR / "tests"
     resource_folder = BASE_DIR / "resources"
-    rf_ = resource_folder.glob("*.txt")
+    rf_ = resource_folder.glob("*testfilewriter*.txt")
     input_file = next(rf_)
 
     return [
@@ -93,10 +93,7 @@ def generate_commands():
                 '{"partId": {"R00C00": { "site1":{"aTB_0": "0.0"}}}}',
                 str(pytest_folder.absolute()),
             ),
-            (
-                "appended(",
-                "outpath",
-            ),
+            ("appended(", " to ", ".h5"),
         ),
         (
             (
@@ -105,10 +102,7 @@ def generate_commands():
                 str(input_file.absolute()),
                 str(pytest_folder.absolute()),
             ),
-            (
-                "appended(",
-                "outpath",
-            ),
+            ("appended(", " to ", ".h5"),
         ),
     ]
 
