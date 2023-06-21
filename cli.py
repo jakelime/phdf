@@ -28,19 +28,36 @@ def main_fn():
         action="store_true",
         help="Skips clean up of the temporary.txt files",
     )
+    parser.add_argument(
+        "-mt",
+        "--measure_timing",
+        action="store_true",
+        help="Measures time taken for the python process calls",
+    )
 
     args = parser.parse_args()
 
     if len(args.data_input) > 256:
-        launcher_json_string(args.data_input, args.output_dir)
+        launcher_json_string(
+            args.data_input,
+            args.output_dir,
+            measure_timing=args.measure_timing,
+        )
 
     elif (".txt" == args.data_input[-4:]) or (".TXT" == args.data_input[-4:]):
         launcher_fileio(
-            args.data_input, args.output_dir, skip_cleanup=args.skip_cleanup
+            args.data_input,
+            args.output_dir,
+            skip_cleanup=args.skip_cleanup,
+            measure_timing=args.measure_timing,
         )
 
     else:
-        launcher_json_string(args.data_input, args.output_dir)
+        launcher_json_string(
+            args.data_input,
+            args.output_dir,
+            measure_timing=args.measure_timing,
+        )
 
     return 0
 
