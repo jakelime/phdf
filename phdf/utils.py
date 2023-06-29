@@ -41,8 +41,10 @@ class FileManager:
         else:
             return [x for x in filepaths]
 
-    def get_resource_file(self, use_wildcard: str | bool = False) -> Path:
-        self.go_up().cd("resources")
+    def get_resource_file(
+        self, dirname: str = "resources", use_wildcard: str | bool = False
+    ) -> Path:
+        self.go_up().cd(dirname)
         if use_wildcard:
             return self.find_file(use_wildcard, single_file=True)  # type: ignore
         else:
