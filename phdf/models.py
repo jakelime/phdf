@@ -148,6 +148,8 @@ class DevicePixelArray:
 
     def save_to_hdf(self) -> Path:
         for i, table in enumerate(self.tables):
+            if not self.outpath.parent.is_dir():
+                self.outpath.parent.mkdir(parents=True, exist_ok=True)
             df = table.df
             df.to_hdf(
                 self.outpath,
