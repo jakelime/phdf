@@ -3,6 +3,7 @@ from pathlib import Path
 import pytest
 import os
 import platform
+from utils import PathFinder
 
 BASE_DIR = Path(__file__).parent.parent.resolve()
 
@@ -159,6 +160,10 @@ def test_cli(commands_and_expected_kws):
     )
     stderr = p0.stderr.decode("utf-8")
     kw_in_stderr = [(kw in stderr) for kw in keywords]
+
+    pathfinder = PathFinder()
+    _ = pathfinder.generate_output_dir(name="pytest_generated_output")
+
     assert all(kw_in_stderr)  # checks if expected keywords present
     assert "ERROR   :" not in stderr  # checks that there are no errors logged
     assert check_for_hdf5_output_files_and_cleanup() > 0  # there must be output files

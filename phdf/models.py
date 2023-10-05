@@ -101,7 +101,6 @@ class DevicePixelArray:
         return json_str_list
 
     def decipher_json_strings(self, values: list[Mapping]) -> list[PixelData]:
-
         pixel_data_list = []
         for x in values:
             sn = list(x.keys())[0]
@@ -130,6 +129,7 @@ class DevicePixelArray:
         df["table_name"] = df["site"] + "_" + df["serialnumber"] + "_" + df["ch"]
         df["row"] = df["coord"].apply(lambda x: int(x[1:3]))
         df["col"] = df["coord"].apply(lambda x: x[3:])
+        df["value"] = pd.to_numeric(df["value"])
         return df
 
     def add_df_array(self, name: str, dfin: pd.DataFrame) -> None:
