@@ -1,6 +1,7 @@
 # Created by https://www.toptal.com/developers/gitignore/api/macos,java,python
 # Edit at https://www.toptal.com/developers/gitignore?templates=macos,java,python
 
+.vscode
 resources/*.h5
 
 
