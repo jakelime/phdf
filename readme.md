@@ -2,7 +2,7 @@
 
 ## Quick start
 
-### Simple example
+### (1) Simple example
 
 #### Running directly using python
 
@@ -26,7 +26,7 @@ platform darwin -- Python 3.11.5, pytest-7.4.2, pluggy-1.3.0 -- /Users/jakelim/a
 cachedir: .pytest_cache
 rootdir: /Users/jakelim/SynologyDrive/cloud-active_project/phdf
 plugins: dash-2.13.0
-collected 4 items                                                              
+collected 4 items
 
 tests/test_cli.py::test_cli_incomplete_calls[No args] PASSED             [ 25%]
 tests/test_cli.py::test_cli_incomplete_calls[Missing args] PASSED        [ 50%]
@@ -34,20 +34,16 @@ tests/test_cli.py::test_cli[using JSON string] PASSED                    [ 75%]
 tests/test_cli.py::test_cli[using FileIO] PASSED                         [100%]
 
 ============================== 4 passed in 3.72s ===============================
-(py311) ➜  phdf git:(main) ✗ 
+(py311) ➜  phdf git:(main) ✗
 ```
 
+### (2) Full implementation
 
-### Full implementation with automated distribution
-
-Although we can use this repository standalone, we have also designed to be
+Although we can use this repository standalone, this is designed to be
 built in as a depedency using `git submodule`.
 
-As such, we can use [Distr SMT Test Programs](https://gittf.ams-osram.info/os-opto-dev/dist_smt_tps)
-for 1-click automated distribution.
-
 ```bash
-git clone --recurse-submodules git@gittf.ams-osram.info:os-opto-dev/dist_smt_tps.git
+git clone --recurse-submodules git@gitlab.private.info:privatedevs/distribute_smt8.git
 python push.py --push
 ```
 
@@ -56,12 +52,10 @@ automically.
 
 Just run the `TestProgram` after you push, that is all.
 
-## Future improvement plans
-
-To improve, we can compile a distributable app with syslink to system path `phdf`, then run
+To improve further, we can compile a distributable app with syslink to system path `phdf`, then run
 
 ```bash
-# phdf arg1 arg2
+# command line interface: phdf arg1 arg2
 phdf ~/phdf/resources/testfilewriter-2047225563688979.txt ~/Downloads
 ```
 
@@ -150,7 +144,7 @@ up because `.txt` is a very inefficient storage container.
 
 ### Interfacing to Java using subprocess to call python
 
-We will use Java\'s
+We will use Java's
 `ProcessBuilder builder = new ProcessBuilder(command);`,
 
 A simple example of how to implement:
@@ -180,34 +174,6 @@ command initialized, /Users/jli8/miniconda3/envs/p311/bin/python, /Users/jli8/ac
 >> calling subprocess phdf (data.length=52) /Users/jli8/Downloads
 INFO    : 0: appended(site1_partId1_aTB_0) to 'nil-20230607_090809-cp3.h5'
 >> phdf completed with exitCode=0
-```
-
-## Testing
-
-Pytest is used in this repository for running DevOps and code testing.
-
-```bash
-cd tests
-pytest -v # -v is a verbose flag, to show you which are tests running
-```
-
-Example results from a full test suite
-
-```bash
-(p311) ➜  tests git:(main) pytest -v
-============================================== test session starts ===============================================
-platform darwin -- Python 3.11.3, pytest-7.2.2, pluggy-1.0.0 -- /Users/jli8/miniconda3/envs/p311/bin/python3.11
-cachedir: .pytest_cache
-rootdir: /Users/jli8/activedir/200-phdf/tests
-plugins: typeguard-2.13.3, cov-4.0.0, anyio-3.6.2, dash-2.9.1
-collected 4 items
-
-test_cli.py::test_cli_incomplete_calls[No args] PASSED                                                     [ 25%]
-test_cli.py::test_cli_incomplete_calls[Missing args] PASSED                                                [ 50%]
-test_cli.py::test_cli[using JSON string] PASSED                                                            [ 75%]
-test_cli.py::test_cli[using FileIO] PASSED                                                                 [100%]
-
-=============================================== 4 passed in 6.30s ================================================
 ```
 
 ### Notes
@@ -250,7 +216,27 @@ INFO    : 19: appended(site2_partId1_aTB_9) to 'testfilewriter-2047225563688979-
 >> phdf completed with exitCode=0
 ```
 
-### Changelogs
+## Environment Setup and Installation
+
+```bash
+➜  phdf git:(main) ✗ python -m venv venv
+➜  phdf git:(main) ✗ source venv/bin/activate
+(venv) ➜  phdf git:(main) ✗ pip install -r requirements.txt
+(venv) ➜  phdf git:(main) ✗ python cli.py
+```
+
+### Using `Pyinstaller`
+
+Always use `pyinstaller` on a virtual environment from `python -m venv venv`
+
+Use this to create a binary application for `cli`.
+
+```bash
+(venv) ➜  phdf git:(main) ✗ pip install pyinstaller
+(venv) ➜  phdf git:(main) ✗ pyinstaller cli.py --name phdf --onefile --collect-all tables
+```
+
+## Changelogs
 
 - v1.1.0
 
@@ -307,284 +293,3 @@ INFO    : 19: appended(site2_partId1_aTB_9) to 'testfilewriter-2047225563688979-
 
 - v0.0.1
   - first draft version released
-
-### Environment Setup and Installation
-
-This section describes how to set up a basic environment to use python.
-
-Note that this part may be already been outdated, we can use automated
-scripting tools to install the entire test program here in
-[smt8-hdf](https://gittf.ams-osram.info/os-opto-dev/smt8-hdf), which is
-another repo with the full test program with the interface already
-programmed into the SMT test program.
-
-#### Setting up Python environment
-
-1. We use standard python packaging techniques here. A simple example
-   for bare minimal install manually:
-
-   ```bash
-   ## Using python==3.10
-   conda create -n p310 python=3.10
-   conda activate p310
-   ## For pwsh: where.exe python
-   which python3
-   python3 -m venv venv --copies
-   conda deactivate
-   ## For pwsh: .\venv\Scripts\activate
-   source ./venv/bin/activate
-   ## For pwsh: where.exe python
-   which python
-   python -m pip install --upgrade pip
-   pip install tables
-   pip install pandas
-   pip install pyinstaller
-   ```
-
-2. Another one of the standard methods to install from pip
-   requirements.txt:
-
-   ```bash
-   ## Full libraries consist of packages for
-   # - Bare minimum depedencies
-   # - DevOps (PUSH TO SERVER)
-   # - PyTest for code testing
-   pip install -r requirements-osx-full.txt
-
-   ## Bare minimum dependencies to execute in production
-   pip install -r requirements-osx-minimum.txt
-
-   ## How to make req.txt from your current env
-   pip freeze > requirements.txt
-   ```
-
-3. Use `Bash` script for automated `venv` execution. This method will
-   pull the latest versions of depedencies from PyPI. It should work
-   most of the time, but not guaranteed.
-
-   ```bash
-   ## To install bare minimum dependencies for production
-   bash make_venv.sh
-
-   ## To install full suite, including PyTest and DevOps (SSH integration)
-   base make_venv.sh full
-   ```
-
-4. To view the dependencies, read the function
-   `install_python_libraries_full` from `make_venv.sh`.
-
-   This codebase employs the use of new python syntax such walrus
-   operator and type hinting.
-
-   Recommended `python>=3.10` because of the `match statements` and
-   `type hinting` used.
-
-   Recommended test environment `python3.10` because Anaconda\'s latest
-   Linux distribution as of today is still `python3.10`. Using
-   `python3.11` will work most of the time, but there are notable new
-   in type hintings not compatible to `python3.10`.
-
-   Refactoring for compatibility with `python3.8` for compatibility to
-   `win7` is possible. Remove the type hints and replace `match`
-   statements with `if else` statements.
-
-#### Using `Pyinstaller`
-
-Always use `pyinstaller` on a dedicated virtual environment! This will
-ensure that app will package the dependencies properly and minimise
-debugging issues related to dependencies.
-
-```bash
-# Using OSX
-pyinstaller cli.py --name phdf --onefile --collect-all tables
-```
-
-#### Outdated instructions
-
-These are some deprecated instructions that have been left over from
-previous versions
-
-New versions include automated scripts to run these instructions.
-
-## Manual installation process
-
-Remote tester: `rbgv93k0001.int.osram-light.com`
-
-On your local machine with internet access,
-
-1. Download latest Anaconda (python3.10) [Linux
-   distribution](https://www.anaconda.com/download#downloads)
-
-2. Donwnload this repo using the `Download` button or `git clone`
-   (don\'t forget to zip it for uploading)
-
-3. Transfer the 2 files into the Linux machine
-
-4. `sftp j.lim2@rbgv93k0001.int.osram-light.com`
-
-5. Check your remote dir using `sftp> pwd`
-
-   ```bash
-   Remote working directory: /home/j.lim2/Downloads/
-   ```
-
-6. Check your local dir `sftp> lpwd`
-
-   ```bash
-   Local working directory: /Users/jli8/Downloads/
-   ```
-
-7. Upload `Anaconda installer` using
-   `sftp> put /Anaconda3-2023.03-1-Linux-x86_64.sh /Anaconda3-2023.03-1-Linux-x86_64.sh`
-
-8. Upload `phdf.tar` using `sftp> put /phdf-main.tar /phdf-main.tar`
-
-Now, remote access into the linux machine
-
-1. Open `konsole`
-2. `cd ~/Downloads/`
-
-First, install `Anaconda`
-
-1. `sh Anaconda3-2023.03-1-Linux-x86_64.sh`
-
-2. Follow the on screen instructions to install Anaconda
-
-3. Allow conda to `conda init`
-
-4. Run `conda info` command
-
-   ```bash
-   active environment : base
-   active env location : /home/j.lim2/Anaconda3
-   conda version : 23.5.0
-   python version : 3.10.9.final.0
-   ```
-
-Then, unpack `phdf-main` and start using it
-
-1. Unpack `phdf-main.tar`
-
-2. `cd /home/j.lim2/phdf-main`
-
-3. \[optional\] You can check if python interface is working properly
-
-   ```bash
-   python cli.py '{"partId": {"R00C00": { "site1":{"aTB_0": "0.0"}}}}' '/Users/jli8/Downloads'
-
-   INFO    : 0: appended(site1_partId_aTB_0) to  self.outpath.name='nil-20230607_093843-cp3.h5'
-   ```
-
-4. Modify the path parameters in `phdf_j\Phdf.java`
-
-   We need to modify the `Path` parameters, depending on your sys
-   environment. In the future, when we figure out packaging and how to
-   distribute, this part will be automated.
-
-   ```java
-   public Phdf() {
-       ...
-       this.pythonPath = myDocPath + "/anaconda3/bin/python";
-       this.cliPath = myDocPath + "/gitRepos/phdf/cli.py";
-       ...
-   }
-   ```
-
-5. Modify the entry point `Main.java`
-
-   This is just an example. This part code should be living in your
-   actual test program.
-
-   ```java
-   import phdf_j.Phdf;
-
-   public class Main {
-
-       public static void main(String[] args) {
-
-           // Initialize the CLI tool
-           Phdf processor = new Phdf();
-
-           // Run the CLI tool (Option#1.1)
-           processor.run(jsonString, "/Users/jli8/Downloads"); // Unfortunately, we get error=7, Argument list too long
-
-           // Run the CLI tool (Option#1.2)
-           processor.run("{\"partId1\": {\"R00C00\": { \"site1\":{\"aTB_0\": \"0.0\"}}}}", "/Users/jli8/Downloads");
-
-           // Run the CLI tool (Option#2)
-           processor.run("/Users/jli8/activedir/200-phdf/resources/testfilewriter-2047225563688979.txt", "/Users/jli8/Downloads");
-       }
-
-   }
-   ```
-
-6. Test out the `java` entry point
-
-   > ```bash
-   > (p311) ➜  200-phdf git:(wip) ✗ javac Main.java
-   > (p311) ➜  200-phdf git:(wip) ✗ java Main
-   >
-   > command iniialized: [/Users/jli8/anaconda3/bin/python, /Users/jli8/gitRepos/phdf/cli.py]
-   > PhdfProcess initialized
-   > >> calling subprocess phdf (data.length=52) /Users/jli8/Downloads
-   > INFO    : 0: appended(site1_partId1_aTB_0) to  self.outpath.name='nil-20230607_090809-cp3.h5'
-   > >> phdf completed with exitCode=0
-   > ```
-
-7. `sftp j.lim2@rbgv93k0001.int.osram-light.com`
-
-8. Check your remote dir using `sftp> pwd`
-
-   ```bash
-   Remote working directory: /home/j.lim2/Downloads/
-   ```
-
-9. Check your local dir `sftp> lpwd`
-
-   ```bash
-   Local working directory: /Users/jli8/Downloads/
-   ```
-
-10. Upload `Anaconda installer` using
-    `sftp> put /Anaconda3-2023.03-1-Linux-x86_64.sh /Anaconda3-2023.03-1-Linux-x86_64.sh`
-
-11. Upload `phdf.tar` using `sftp> put /phdf-main.tar /phdf-main.tar`
-
-Now, remote access into the linux machine
-
-1. Open `konsole`
-2. `cd ~/Downloads/`
-
-First, install `Anaconda`
-
-1. `sh Anaconda3-2023.03-1-Linux-x86_64.sh`
-
-## Setting up Bash on Windows using WSL
-
-1. Download the Windows Subsystem for Linux, developed by Microsoft
-   from the [Microsoft
-   Store](https://www.microsoft.com/store/productId/9P9TQF7MRM4R)
-
-2. Activate your shell by typing `bash` in cmd / pwsh
-
-   Remember update your shell as standard practices
-
-   ```bash
-   sudo apt-get update
-   sudo apt-get upgrade
-   ```
-
-   Get the usual tools we need (it might not be pre-installed,
-   depending on which WSL you chose)
-
-   ```bash
-   sudo apt-get install zip
-   sudo apt-get install dos2unix
-   ```
-
-3. Download and install
-   [miniconda](https://docs.conda.io/en/latest/miniconda.html) on the
-   WSL
-
-   Yes, do we have to perform this step (again) because WSL is a
-   separate kernel and we need conda linux to be running there
